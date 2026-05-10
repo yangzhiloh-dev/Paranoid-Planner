@@ -322,6 +322,4 @@ export const Tasks = () => {
     </div>
   );
 };
-    </div>
-  );
-};
+
