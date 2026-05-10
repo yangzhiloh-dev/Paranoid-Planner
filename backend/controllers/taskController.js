@@ -218,12 +218,16 @@ const updateTask = async (req, res) => {
     }
 
     updates.push(`updated_at = CURRENT_TIMESTAMP`);
-    params.push(taskId, userId);
+    params.push(taskId);
+    const taskIdParam = paramCount++;
+
+    params.push(userId);
+    const userIdParam = paramCount++;
 
     const query = `
       UPDATE tasks
       SET ${updates.join(', ')}
-      WHERE id = $${paramCount++} AND user_id = $${paramCount++}
+      WHERE id = $${taskIdParam} AND user_id = $${userIdParam}
       RETURNING id, user_id, module_id, title, description, deadline, estimated_minutes, priority, status, preferred_start_time, preferred_end_time, created_at, updated_at
     `;
 

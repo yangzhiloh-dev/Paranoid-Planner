@@ -13,24 +13,58 @@ import { Schedule } from './pages/Schedule';
 import './index.css';
 
 function App() {
-  // TODO: Set up React Router with the following routes:
-  // - / -> Dashboard (protected)
-  // - /login -> Login (public)
-  // - /register -> Register (public)
-  // - /modules -> Modules (protected)
-  // - /tasks -> Tasks (protected)
-  // - /schedule -> Schedule (protected)
-  //
-  // Routes should be wrapped in:
-  // 1. Router
-  // 2. AuthProvider
-  // 3. Use ProtectedRoute for protected routes
-
   return (
     <Router>
       <AuthProvider>
         <Routes>
-          {/* TODO: Add routes here */}
+          <Route
+            path="/"
+            element={<Navigate to="/dashboard" replace />}
+          />
+
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+
+          <Route
+            path="/modules"
+            element={
+              <ProtectedRoute>
+                <Modules />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/tasks"
+            element={
+              <ProtectedRoute>
+                <Tasks />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/schedule"
+            element={
+              <ProtectedRoute>
+                <Schedule />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="*"
+            element={<Navigate to="/dashboard" replace />}
+          />
         </Routes>
       </AuthProvider>
     </Router>

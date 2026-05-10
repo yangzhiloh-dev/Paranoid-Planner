@@ -1,11 +1,19 @@
 // Protected Route Component
 // Wraps routes that require authentication
 
-import { useContext } from 'react';
-import { Navigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from "../context/AuthContext";
 
-export const ProtectedRoute = ({ children }) => {
+export default function ProtectedRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
   // TODO: Get isAuthenticated and loading from AuthContext
 
   // TODO: If loading, show loading spinner

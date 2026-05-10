@@ -2,43 +2,117 @@
 // Manages global authentication state
 
 import { createContext, useState, useEffect } from 'react';
-import api from '../api/api';
+import { authAPI } from '../api/api';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  // TODO: Create state for:
-  // - user (current user object)
-  // - token (JWT token)
-  // - isAuthenticated (boolean)
-  // - loading (boolean for initial load)
-  // - error (error message)
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // TODO: On component mount:
-  // 1. Check if token exists in localStorage
-  // 2. If yes, call api.getMe() to verify and load user
-  // 3. Set loading to false when done
+  useEffect(() => {
+    const loadUser = async () => {
+      const storedToken = localStorage.getItem('token');
 
-  // TODO: Create login function that:
-  // 1. Calls api.login(email, password)
-  // 2. Saves token to localStorage
-  // 3. Sets user state
-  // 4. Sets isAuthenticated to true
+      if (!storedToken) {
+        setLoading(false);
+        return;
+      }
 
-  // TODO: Create register function that:
-  // 1. Calls api.register(email, name, password)
-  // 2. Automatically logs in the user
-  // 3. Sets user state and token
+      try {
+        const res = await authAPI.getMe();
 
-  // TODO: Create logout function that:
-  // 1. Clears localStorage token
-  // 2. Clears user state
-  // 3. Sets isAuthenticated to false
+        setUser(res.data.user);
+        setToken(storedToken);
+        setIsAuthenticated(true);
+      } catch (err) {
+        localStorage.removeItem('token');
+
+        setUser(null);
+        setToken(null);
+        setIsAuthenticated(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUser();
+  }, []);
+
+  const login = async (email, password) => {
+    setError('');
+
+    try {
+      const res = await authAPI.login(email, password);
+
+      const newToken = res.data.token;
+
+      localStorage.setItem('token', newToken);
+
+      setToken(newToken);
+      setUser(res.data.user);
+      setIsAuthenticated(true);
+
+      return res.data;
+    } catch (err) {
+      const message =
+        err.response?.data?.error || 'Login failed';
+
+      setError(message);
+
+      throw err;
+    }
+  };
+
+  const register = async (name, email, password) => {
+    setError('');
+
+    try {
+      const res = await authAPI.register(name, email, password);
+
+      const newToken = res.data.token;
+
+      localStorage.setItem('token', newToken);
+
+      setToken(newToken);
+      setUser(res.data.user);
+      setIsAuthenticated(true);
+
+      return res.data;
+    } catch (err) {
+      const message =
+        err.response?.data?.error || 'Registration failed';
+
+      setError(message);
+
+      throw err;
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+
+    setUser(null);
+    setToken(null);
+    setIsAuthenticated(false);
+  };
 
   return (
-    <AuthContext.Provider value={{
-      // TODO: Export all auth state and functions
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        isAuthenticated,
+        loading,
+        error,
+        login,
+        register,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -128,12 +128,16 @@ const updateModule = async (req, res) => {
     }
 
     updates.push(`updated_at = CURRENT_TIMESTAMP`);
-    params.push(moduleId, userId);
+    params.push(moduleId);
+    const moduleIdParam = paramCount++;
+
+    params.push(userId);
+    const userIdParam = paramCount++;
 
     const query = `
       UPDATE modules
       SET ${updates.join(', ')}
-      WHERE id = $${paramCount++} AND user_id = $${paramCount++}
+      WHERE id = $${moduleIdParam} AND user_id = $${userIdParam}
       RETURNING id, user_id, module_code, module_name, color, created_at, updated_at
     `;
 

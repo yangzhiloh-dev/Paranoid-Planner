@@ -3,33 +3,85 @@
 
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// TODO: Create axios instance with base URL
+const api = axios.create({
+  baseURL: API_URL,
+});
 
-// TODO: Add request interceptor that:
-// 1. Retrieves JWT token from localStorage
-// 2. Adds Authorization header with token (Bearer format)
-// 3. Passes request to server
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
 
-// TODO: Add response interceptor that:
-// 1. Checks for 401 Unauthorized responses
-// 2. If 401, clear token from localStorage and redirect to login
-// 3. Otherwise pass response through
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
 
-// TODO: Export API wrapper functions:
-// - authAPI.register(email, name, password)
-// - authAPI.login(email, password)
-// - authAPI.getMe()
-// - modulesAPI.getModules()
-// - modulesAPI.createModule(data)
-// - modulesAPI.updateModule(id, data)
-// - modulesAPI.deleteModule(id)
-// - tasksAPI.getTasks()
-// - tasksAPI.createTask(data)
-// - tasksAPI.updateTask(id, data)
-// - tasksAPI.deleteTask(id)
-// - scheduleAPI.generateSchedule()
-// - scheduleAPI.getSchedule()
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+export const authAPI = {
+  register: (name, email, password) =>
+    api.post('/auth/register', { name, email, password }),
+
+  login: (email, password) =>
+    api.post('/auth/login', { email, password }),
+
+  getMe: () =>
+    api.get('/auth/me'),
+};
+
+export const modulesAPI = {
+  getModules: () =>
+    api.get('/modules'),
+
+  createModule: (data) =>
+    api.post('/modules', data),
+
+  updateModule: (id, data) =>
+    api.put(`/modules/${id}`, data),
+
+  deleteModule: (id) =>
+    api.delete(`/modules/${id}`),
+};
+
+export const tasksAPI = {
+  getTasks: () =>
+    api.get('/tasks'),
+
+  createTask: (data) =>
+    api.post('/tasks', data),
+
+  updateTask: (id, data) =>
+    api.put(`/tasks/${id}`, data),
+
+  deleteTask: (id) =>
+    api.delete(`/tasks/${id}`),
+};
+
+export const scheduleAPI = {
+  generateSchedule: () =>
+    api.post('/schedule/generate'),
+
+  getSchedule: () =>
+    api.get('/schedule'),
+};
 
 export default api;
