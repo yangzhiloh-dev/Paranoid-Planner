@@ -8,8 +8,13 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const authMiddleware = require('../middleware/authMiddleware');
 
+console.log('✓ [Routes] Loading authentication routes...');
+
 // Register new user
-router.post('/register', authController.register);
+router.post('/register', (req, res, next) => {
+  console.log('📨 [Route] POST /api/auth/register received');
+  authController.register(req, res);
+});
 
 // Login user
 router.post('/login', authController.login);

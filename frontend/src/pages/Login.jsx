@@ -1,9 +1,9 @@
 // Login Page
 // User login form
 
-import { useState, useContext } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
@@ -11,7 +11,7 @@ export const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login } = useContext(AuthContext);
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -35,55 +35,91 @@ export const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 px-4 py-8">
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-6 rounded-lg shadow-md w-full max-w-md"
+        className="w-full max-w-md"
       >
-        <h1 className="text-2xl font-bold mb-2 text-center">
-          Login
-        </h1>
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center">
+              <span className="text-white font-bold text-xl">P</span>
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Welcome back
+          </h1>
+          <p className="text-gray-600">
+            Sign in to your ParanoidPlanner account
+          </p>
+        </div>
 
-        <p className="text-gray-600 text-center mb-6">
-          Welcome back to ParanoidPlanner.
-        </p>
-
+        {/* Error Message */}
         {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-medium">
             {error}
           </div>
         )}
 
-        <label className="block mb-2 font-medium">Email</label>
-        <input
-          className="w-full border rounded p-2 mb-4"
-          type="email"
-          placeholder="Enter your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+        {/* Form Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+          
+          {/* Email Field */}
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-gray-900 mb-3">
+              Email address
+            </label>
+            <input
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              type="email"
+              placeholder="name@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+            />
+          </div>
 
-        <label className="block mb-2 font-medium">Password</label>
-        <input
-          className="w-full border rounded p-2 mb-4"
-          type="password"
-          placeholder="Enter your password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          {/* Password Field */}
+          <div className="mb-8">
+            <label className="block text-sm font-semibold text-gray-900 mb-3">
+              Password
+            </label>
+            <input
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+            />
+          </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:bg-blue-300"
-        >
-          {loading ? 'Logging in...' : 'Login'}
-        </button>
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-3 rounded-xl hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-200"
+          >
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                Signing in...
+              </span>
+            ) : (
+              'Sign in'
+            )}
+          </button>
+        </div>
 
-        <p className="mt-4 text-sm text-center">
+        {/* Register Link */}
+        <p className="mt-6 text-center text-gray-600 text-sm">
           Don&apos;t have an account?{' '}
-          <Link to="/register" className="text-blue-600 hover:underline">
-            Register
+          <Link 
+            to="/register" 
+            className="font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+          >
+            Create one now
           </Link>
         </p>
       </form>

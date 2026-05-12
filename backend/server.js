@@ -1,9 +1,17 @@
 // ParanoidPlanner Backend Server
 // Main Express application entry point
 
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+
+// DEBUGGING: Log that dotenv is loaded
+console.log('\n🔍 [SERVER] Starting ParanoidPlanner backend...');
+console.log('📁 .env file location:', path.resolve(__dirname, '.env'));
+console.log('✓ NODE_ENV loaded:', !!process.env.NODE_ENV);
+console.log('✓ PORT loaded:', !!process.env.PORT);
+
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
 
 const app = express();
 
@@ -11,6 +19,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Import database module AFTER dotenv is configured
+const pool = require('./config/db');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
