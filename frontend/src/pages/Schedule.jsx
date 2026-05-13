@@ -19,7 +19,7 @@ export const Schedule = () => {
     try {
       setLoading(true);
       const res = await scheduleAPI.getSchedule();
-      setSchedule(res.data);
+      setSchedule(res.data.sessions || []);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to fetch schedule');
     } finally {
@@ -64,7 +64,7 @@ export const Schedule = () => {
           <div className="space-y-4">
             {schedule.map((session, index) => (
               <div key={index} className="bg-white p-4 rounded shadow">
-                <h2 className="text-xl font-bold">{session.task_title}</h2>
+                <h2 className="text-xl font-bold">{session.title || session.task_title}</h2>
                 <p className="text-gray-600">Module: {session.module_code} - {session.module_name}</p>
                 <p className="text-gray-600">Start: {new Date(session.scheduled_start).toLocaleString()}</p>
                 <p className="text-gray-600">End: {new Date(session.scheduled_end).toLocaleString()}</p>

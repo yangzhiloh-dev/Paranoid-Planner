@@ -51,15 +51,27 @@ const ModuleCard = ({ module }) => (
 
 const TaskCard = ({ task }) => {
   const getPriorityColor = (priority) => {
-    switch (priority?.toLowerCase()) {
-      case 'high':
-        return 'bg-red-100 text-red-700';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-700';
-      case 'low':
-        return 'bg-green-100 text-green-700';
+    const p = Number(priority);
+    if (p >= 4) return 'bg-red-100 text-red-700';
+    if (p >= 2) return 'bg-yellow-100 text-yellow-700';
+    return 'bg-green-100 text-green-700';
+  };
+
+  const getPriorityLabel = (priority) => {
+    const p = Number(priority);
+    switch (p) {
+      case 1:
+        return 'Low';
+      case 2:
+        return 'Low-Medium';
+      case 3:
+        return 'Medium';
+      case 4:
+        return 'Medium-High';
+      case 5:
+        return 'High';
       default:
-        return 'bg-gray-100 text-gray-700';
+        return 'Medium';
     }
   };
 
@@ -73,7 +85,7 @@ const TaskCard = ({ task }) => {
               task.priority
             )}`}
           >
-            {task.priority}
+            {getPriorityLabel(task.priority)}
           </span>
         )}
       </div>
@@ -107,9 +119,9 @@ export const Dashboard = () => {
           scheduleAPI.getSchedule(),
         ]);
 
-        const moduleData = modulesRes.data;
-        const taskData = tasksRes.data;
-        const scheduleData = scheduleRes.data;
+        const moduleData = modulesRes.data.modules || [];
+        const taskData = tasksRes.data.tasks || [];
+        const scheduleData = scheduleRes.data.sessions || [];
 
         const pendingTasks = taskData
           .filter((task) => task.status !== 'completed')

@@ -167,7 +167,7 @@ export const Modules = () => {
     try {
       setLoading(true);
       const res = await modulesAPI.getModules();
-      setModules(res.data);
+      setModules(res.data.modules || []);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to fetch modules');
     } finally {

@@ -18,7 +18,7 @@ export const Tasks = () => {
     description: '',
     deadline: '',
     estimated_minutes: '',
-    priority: 'medium',
+    priority: 3,
     status: 'pending',
     preferred_start_time: '',
     preferred_end_time: ''
@@ -32,8 +32,8 @@ export const Tasks = () => {
           tasksAPI.getTasks(),
           modulesAPI.getModules()
         ]);
-        setTasks(tasksRes.data);
-        setModules(modulesRes.data);
+        setTasks(tasksRes.data.tasks || []);
+        setModules(modulesRes.data.modules || []);
       } catch (err) {
         setError(err.response?.data?.error || 'Failed to load data');
       } finally {
@@ -46,7 +46,7 @@ export const Tasks = () => {
   const fetchTasks = async () => {
     try {
       const res = await tasksAPI.getTasks();
-      setTasks(res.data);
+      setTasks(res.data.tasks || []);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to fetch tasks');
     }
@@ -62,14 +62,19 @@ export const Tasks = () => {
     }
 
     try {
-      await tasksAPI.createTask(formData);
+      const taskData = {
+        ...formData,
+        priority: Number(formData.priority),
+        estimated_minutes: formData.estimated_minutes ? Number(formData.estimated_minutes) : null
+      };
+      await tasksAPI.createTask(taskData);
       setFormData({
         module_id: '',
         title: '',
         description: '',
         deadline: '',
         estimated_minutes: '',
-        priority: 'medium',
+        priority: 3,
         status: 'pending',
         preferred_start_time: '',
         preferred_end_time: ''
@@ -91,7 +96,12 @@ export const Tasks = () => {
     }
 
     try {
-      await tasksAPI.updateTask(editingTask.id, formData);
+      const taskData = {
+        ...formData,
+        priority: Number(formData.priority),
+        estimated_minutes: formData.estimated_minutes ? Number(formData.estimated_minutes) : null
+      };
+      await tasksAPI.updateTask(editingTask.id, taskData);
       setEditingTask(null);
       setFormData({
         module_id: '',
@@ -99,7 +109,7 @@ export const Tasks = () => {
         description: '',
         deadline: '',
         estimated_minutes: '',
-        priority: 'medium',
+        priority: 3,
         status: 'pending',
         preferred_start_time: '',
         preferred_end_time: ''
@@ -138,11 +148,29 @@ export const Tasks = () => {
       description: task.description || '',
       deadline: task.deadline ? new Date(task.deadline).toISOString().slice(0, 16) : '',
       estimated_minutes: task.estimated_minutes || '',
-      priority: task.priority,
+      priority: Number(task.priority) || 3,
       status: task.status,
       preferred_start_time: task.preferred_start_time || '',
       preferred_end_time: task.preferred_end_time || ''
     });
+  };
+
+  const getPriorityLabel = (priority) => {
+    const p = Number(priority);
+    switch (p) {
+      case 1:
+        return 'Low';
+      case 2:
+        return 'Low-Medium';
+      case 3:
+        return 'Medium';
+      case 4:
+        return 'Medium-High';
+      case 5:
+        return 'High';
+      default:
+        return 'Medium';
+    }
   };
 
   const cancelEdit = () => {
@@ -153,7 +181,7 @@ export const Tasks = () => {
       description: '',
       deadline: '',
       estimated_minutes: '',
-      priority: 'medium',
+      priority: 3,
       status: 'pending',
       preferred_start_time: '',
       preferred_end_time: ''
@@ -243,9 +271,9 @@ export const Tasks = () => {
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                 className="w-full p-2 border rounded"
               >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
+                <option value="1">Low</option>
+                <option value="3">Medium</option>
+                <option value="5">High</option>
               </select>
             </div>
             <div className="mb-2">
@@ -298,7 +326,7 @@ export const Tasks = () => {
                 <h2 className="text-xl font-bold">{task.title}</h2>
                 <p className="text-gray-600">Module: {getModuleName(task.module_id)}</p>
                 <p className="text-gray-600">Deadline: {new Date(task.deadline).toLocaleString()}</p>
-                <p className="text-gray-600">Priority: {task.priority}</p>
+                <p className="text-gray-600">Priority: {getPriorityLabel(task.priority)}</p>
                 <p className="text-gray-600">Status: {task.status}</p>
                 {task.description && <p className="text-gray-600 mt-2">{task.description}</p>}
                 <div className="mt-2 flex space-x-2">
