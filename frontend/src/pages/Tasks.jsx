@@ -71,22 +71,20 @@ export const Tasks = () => {
     return () => clearTimeout(timer);
   }, [showToast]);
 
-  const normalizeText = (text) => text.trim().replace(/\s{2,}/g, ' ').trim();
+  const normalizeText = (text) => text.trim().replace(/\b(at|due|by|on|this|next)\b/gi, '').replace(/\s{2,}/g, ' ').trim();
 
-  const normalizeModuleCode = (text) => {
-    const match = text.match(/\b([a-z]{2}\d{4}[a-z]?)\b/i);
-    return match ? match[1].toUpperCase() : null;
-  };
-
-  const parseTime = (timeStr) => {
-    const lower = timeStr.toLowerCase();
-    let hour = 20;
-    let minute = 0;
+  const parseDeadline = (text) => {
+    const lower = text.toLowerCase();
+    const now = new Date();
+    const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
     const timeMatch =
-      lower.match(/(?:at|@)?\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/) ||
+      lower.match(/\b(?:at|@)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/) ||
       lower.match(/\b(\d{1,2}):(\d{2})\b/) ||
       lower.match(/\b(\d{1,2})\s*(am|pm)\b/);
+
+    let hour = 20;
+    let minute = 0;
 
     if (timeMatch) {
       hour = Number(timeMatch[1]);
@@ -98,75 +96,6 @@ export const Tasks = () => {
       }
     }
 
-    return { hour, minute };
-  };
-
-  const parseSpecificDate = (text) => {
-    const lower = text.toLowerCase();
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const { hour, minute } = parseTime(text);
-
-    const setTime = (date) => {
-      date.setHours(hour, minute, 0, 0);
-      return date.toISOString();
-    };
-
-    const monthMap = {
-      january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
-      july: 6, august: 7, september: 8, october: 9, november: 10, december: 11,
-      jan: 0, feb: 1, mar: 2, apr: 3, jun: 5,
-      jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
-    };
-
-    const monthNames = Object.keys(monthMap);
-    const monthRegex = `(${monthNames.join('|')})`;
-
-    const ddMmmMatch = lower.match(new RegExp(`\\b(\\d{1,2})\\s+${monthRegex}(?:\\s+(\\d{4}))?\\b`, 'i'));
-    if (ddMmmMatch) {
-      const day = Number(ddMmmMatch[1]);
-      const month = monthMap[ddMmmMatch[2].toLowerCase()];
-      const year = ddMmmMatch[3] ? Number(ddMmmMatch[3]) : currentYear;
-      const date = new Date(year, month, day);
-      return setTime(date);
-    }
-
-    const mmmDdMatch = lower.match(new RegExp(`${monthRegex}\\s+(\\d{1,2})(?:\\s+(\\d{4}))?\\b`, 'i'));
-    if (mmmDdMatch) {
-      const month = monthMap[mmmDdMatch[1].toLowerCase()];
-      const day = Number(mmmDdMatch[2]);
-      const year = mmmDdMatch[3] ? Number(mmmDdMatch[3]) : currentYear;
-      const date = new Date(year, month, day);
-      return setTime(date);
-    }
-
-    const yyyyMmDdMatch = lower.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
-    if (yyyyMmDdMatch) {
-      const date = new Date(Number(yyyyMmDdMatch[1]), Number(yyyyMmDdMatch[2]) - 1, Number(yyyyMmDdMatch[3]));
-      return setTime(date);
-    }
-
-    const ddSlashMmMatch = lower.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?\b/);
-    if (ddSlashMmMatch) {
-      const day = Number(ddSlashMmMatch[1]);
-      const month = Number(ddSlashMmMatch[2]) - 1;
-      const year = ddSlashMmMatch[3] ? Number(ddSlashMmMatch[3]) : currentYear;
-      const date = new Date(year, month, day);
-      return setTime(date);
-    }
-
-    return null;
-  };
-
-  const parseDeadline = (text) => {
-    const specificDate = parseSpecificDate(text);
-    if (specificDate) return specificDate;
-
-    const lower = text.toLowerCase();
-    const now = new Date();
-    const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const { hour, minute } = parseTime(text);
-
     const getTargetDate = (dayOffset) => {
       const date = new Date(now);
       date.setDate(date.getDate() + dayOffset);
@@ -174,8 +103,13 @@ export const Tasks = () => {
       return date.toISOString();
     };
 
-    if (lower.match(/\b(today|tonight)\b/)) return getTargetDate(0);
-    if (lower.match(/\b(tomorrow)\b/)) return getTargetDate(1);
+    if (lower.match(/\b(today|tonight)\b/)) {
+      return getTargetDate(0);
+    }
+
+    if (lower.match(/\b(tomorrow)\b/)) {
+      return getTargetDate(1);
+    }
 
     const nextDayMatch = lower.match(/\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/);
     const dayMatch = lower.match(/\b(this\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/);
@@ -194,85 +128,57 @@ export const Tasks = () => {
   };
 
   const findModuleId = (text) => {
-    const moduleCode = normalizeModuleCode(text);
-    if (moduleCode) {
-      const found = modules.find((m) => m.module_code?.toUpperCase() === moduleCode);
-      if (found) return found.id;
-    }
-
     const lower = text.toLowerCase();
     for (const module of modules) {
+      const code = module.module_code?.toLowerCase();
       const name = module.module_name?.toLowerCase();
-      if (name && lower.includes(name)) return module.id;
+      if (code && new RegExp(`\\b${code.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`).test(lower)) {
+        return module.id;
+      }
+      if (name && lower.includes(name)) {
+        return module.id;
+      }
       const shortName = name?.split(' ')[0];
-      if (shortName && lower.includes(shortName) && shortName.length > 2) return module.id;
+      if (shortName && lower.includes(shortName) && shortName.length > 2) {
+        return module.id;
+      }
     }
     return null;
   };
 
-  const removeParsedFragmentsFromTitle = (text, moduleCode) => {
-    let cleaned = text;
-
-    if (moduleCode) {
-      cleaned = cleaned.replace(new RegExp(`\\b${moduleCode}\\b`, 'i'), '');
-    }
-
-    cleaned = cleaned
-      .replace(/\b(urgent|asap|high|important|critical|now|priority|low|medium|later|whenever)\b/gi, '')
-      .replace(/\b(today|tonight|tomorrow|next\s+\w+|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, '')
-      .replace(/\b(by|due|deadline)\b/gi, '')
-      .replace(/\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\b/gi, '')
-      .replace(/\b\d{1,2}\/(\d{1,2})(?:\/(\d{4}))?\b/g, '')
-      .replace(/\b\d{4}-\d{2}-\d{2}\b/g, '')
-      .replace(/\b\d{1,2}(?:st|nd|rd|th)?\b/g, '')
-      .replace(/(?:at|@)?\s*\d{1,2}(?::\d{2})?\s*(am|pm)?\b/gi, '')
-      .replace(/\b(at|on)\b/gi, '');
-
-    return normalizeText(cleaned) || '';
-  };
-
   const parseQuickTaskInput = (text) => {
     const lower = text.toLowerCase();
-
-    const priorityMap = {
-      urgent: 5, asap: 5, high: 5, important: 5, critical: 5, now: 5, priority: 5,
-      medium: 3, mid: 3,
-      low: 1, later: 1, whenever: 1
-    };
-
-    let priorityScore = 3;
-    for (const [word, score] of Object.entries(priorityMap)) {
-      if (lower.match(new RegExp(`\\b${word}\\b`))) {
-        priorityScore = score;
-        break;
-      }
-    }
-
-    const moduleCode = normalizeModuleCode(text);
+    const priorityScore = lower.match(/\b(urgent|asap|high|important|critical|now|priority)\b/) ? 5 : lower.match(/\b(low|later|whenever)\b/) ? 1 : 3;
     const moduleId = findModuleId(text);
     const deadline = parseDeadline(text);
-    const title = removeParsedFragmentsFromTitle(text, moduleCode);
 
-    const moduleLabel = moduleId ? modules.find((m) => m.id === moduleId)?.module_code || '' : '';
+    const title = normalizeText(
+      text
+        .replace(/\b(urgent|asap|high|important|critical|now|priority)\b/gi, '')
+        .replace(/\b(today|tomorrow|next\s+\w+|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, '')
+        .replace(/@?\s*\d{1,2}(?::\d{2})?\s*(am|pm)?\b/gi, '')
+        .replace(/\b(by|due|deadline|at|on)\b/gi, '')
+    );
+
+    const moduleLabel = moduleId
+      ? `${modules.find((m) => m.id === moduleId)?.module_code || ''}`
+      : '';
 
     return {
       title: title || text.trim(),
       priority: priorityScore,
       module_id: moduleId,
       moduleLabel,
-      deadline
+      deadline,
     };
   };
 
   const updateQuickPreview = (value) => {
     const parsed = parseQuickTaskInput(value);
-    const deadlineStr = parsed.deadline
-      ? new Date(parsed.deadline).toLocaleDateString() + ' ' + new Date(parsed.deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      : 'No deadline';
     setQuickParsePreview({
       title: parsed.title,
       module: parsed.moduleLabel || 'Not detected',
-      deadline: deadlineStr,
+      deadline: parsed.deadline ? new Date(parsed.deadline).toLocaleString() : 'No deadline found',
       priority: parsed.priority === 5 ? 'High' : parsed.priority === 1 ? 'Low' : 'Medium'
     });
   };
