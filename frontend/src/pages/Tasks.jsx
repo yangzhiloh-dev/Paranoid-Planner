@@ -71,36 +71,76 @@ export const Tasks = () => {
     return () => clearTimeout(timer);
   }, [showToast]);
 
-  const normalizeText = (text) => text.trim().replace(/\b(at|due|by|on|this|next)\b/gi, '').replace(/\s{2,}/g, ' ').trim();
+  // ============================================================
+  // SMART PARSER HELPER FUNCTIONS
+  // ============================================================
 
-  const parseDeadline = (text) => {
+  const normalizeModuleCode = (code) => {
+    return code.trim().toUpperCase().replace(/\s+/g, '');
+  };
+
+  const parseTime = (text) => {
+    const lower = text.toLowerCase();
+    
+    // Match time formats: "8pm", "8 pm", "at 8pm", "20:00", "8:30am"
+    const patterns = [
+      { 
+        regex: /\b(?:at|@)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i,
+        getTime: (m) => {
+          let hour = Number(m[1]);
+          const minute = m[2] ? Number(m[2]) : 0;
+          const meridiem = m[3]?.toLowerCase();
+          if (meridiem === 'pm' && hour < 12) hour += 12;
+          if (meridiem === 'am' && hour === 12) hour = 0;
+          return { hour, minute };
+        }
+      },
+      { 
+        regex: /\b(\d{1,2}):(\d{2})\s*(am|pm)?\b/i,
+        getTime: (m) => {
+          let hour = Number(m[1]);
+          const minute = Number(m[2]);
+          const meridiem = m[3]?.toLowerCase();
+          if (meridiem === 'pm' && hour < 12) hour += 12;
+          if (meridiem === 'am' && hour === 12) hour = 0;
+          return { hour, minute };
+        }
+      },
+      { 
+        regex: /\b(\d{1,2})\s*(am|pm)\b/i,
+        getTime: (m) => {
+          let hour = Number(m[1]);
+          const minute = 0;
+          const meridiem = m[2]?.toLowerCase();
+          if (meridiem === 'pm' && hour < 12) hour += 12;
+          if (meridiem === 'am' && hour === 12) hour = 0;
+          return { hour, minute };
+        }
+      }
+    ];
+
+    for (const { regex, getTime } of patterns) {
+      const match = lower.match(regex);
+      if (match) {
+        return { ...getTime(match), matched: true };
+      }
+    }
+
+    return { hour: 20, minute: 0, matched: false }; // Default 8pm
+  };
+
+  const parseRelativeDate = (text) => {
     const lower = text.toLowerCase();
     const now = new Date();
     const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-    const timeMatch =
-      lower.match(/\b(?:at|@)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/) ||
-      lower.match(/\b(\d{1,2}):(\d{2})\b/) ||
-      lower.match(/\b(\d{1,2})\s*(am|pm)\b/);
-
-    let hour = 20;
-    let minute = 0;
-
-    if (timeMatch) {
-      hour = Number(timeMatch[1]);
-      minute = timeMatch[2] && timeMatch[2].length === 2 ? Number(timeMatch[2]) : 0;
-      if (timeMatch[3]) {
-        const meridiem = timeMatch[3].toLowerCase();
-        if (meridiem === 'pm' && hour < 12) hour += 12;
-        if (meridiem === 'am' && hour === 12) hour = 0;
-      }
-    }
+    const { hour, minute } = parseTime(text);
 
     const getTargetDate = (dayOffset) => {
       const date = new Date(now);
       date.setDate(date.getDate() + dayOffset);
       date.setHours(hour, minute, 0, 0);
-      return date.toISOString();
+      return date;
     };
 
     if (lower.match(/\b(today|tonight)\b/)) {
@@ -112,14 +152,14 @@ export const Tasks = () => {
     }
 
     const nextDayMatch = lower.match(/\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/);
-    const dayMatch = lower.match(/\b(this\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/);
-    const dayName = nextDayMatch ? nextDayMatch[1] : dayMatch ? dayMatch[2] : null;
+    const dayMatch = lower.match(/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/);
+    const dayName = nextDayMatch ? nextDayMatch[1] : dayMatch ? dayMatch[1] : null;
 
     if (dayName) {
       const targetIndex = weekdays.indexOf(dayName);
       const currentIndex = now.getDay();
       let diff = targetIndex - currentIndex;
-      if (diff < 0) diff += 7;
+      if (diff <= 0) diff += 7; // Always future
       if (nextDayMatch && diff === 0) diff = 7;
       return getTargetDate(diff);
     }
@@ -127,59 +167,184 @@ export const Tasks = () => {
     return null;
   };
 
-  const findModuleId = (text) => {
+  const parseSpecificDate = (text) => {
     const lower = text.toLowerCase();
-    for (const module of modules) {
-      const code = module.module_code?.toLowerCase();
-      const name = module.module_name?.toLowerCase();
-      if (code && new RegExp(`\\b${code.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`).test(lower)) {
-        return module.id;
+    const { hour, minute } = parseTime(text);
+
+    // Patterns for specific dates
+    const patterns = [
+      // 2026-05-20, 2026-05-20 20:00
+      {
+        regex: /(\d{4})-(\d{1,2})-(\d{1,2})/,
+        parse: (m) => new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), hour, minute)
+      },
+      // 20/05/2026, 20/05
+      {
+        regex: /(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?/,
+        parse: (m) => {
+          const day = Number(m[1]);
+          const month = Number(m[2]);
+          const year = m[3] ? Number(m[3]) : new Date().getFullYear();
+          return new Date(year, month - 1, day, hour, minute);
+        }
+      },
+      // "20 May", "May 20", "20 May 2026"
+      {
+        regex: /(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*(?:\s+(\d{4}))?/i,
+        parse: (m) => {
+          const day = Number(m[1]);
+          const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+          const month = months[m[2].toLowerCase().substring(0, 3)];
+          const year = m[3] ? Number(m[3]) : new Date().getFullYear();
+          return new Date(year, month, day, hour, minute);
+        }
+      },
+      // "May 20", "May 20 2026"
+      {
+        regex: /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s+(\d{1,2})(?:\s+(\d{4}))?/i,
+        parse: (m) => {
+          const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+          const month = months[m[1].toLowerCase().substring(0, 3)];
+          const day = Number(m[2]);
+          const year = m[3] ? Number(m[3]) : new Date().getFullYear();
+          return new Date(year, month, day, hour, minute);
+        }
       }
-      if (name && lower.includes(name)) {
-        return module.id;
-      }
-      const shortName = name?.split(' ')[0];
-      if (shortName && lower.includes(shortName) && shortName.length > 2) {
-        return module.id;
+    ];
+
+    for (const { regex, parse } of patterns) {
+      const match = lower.match(regex);
+      if (match) {
+        const date = parse(match);
+        if (!isNaN(date.getTime())) {
+          return date;
+        }
       }
     }
+
     return null;
   };
 
-  const parseQuickTaskInput = (text) => {
+  const parseDeadline = (text) => {
+    // Try specific date first
+    let date = parseSpecificDate(text);
+    if (date && !isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+
+    // Fall back to relative date
+    date = parseRelativeDate(text);
+    if (date && !isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+
+    return null;
+  };
+
+  const detectPriority = (text) => {
     const lower = text.toLowerCase();
-    const priorityScore = lower.match(/\b(urgent|asap|high|important|critical|now|priority)\b/) ? 5 : lower.match(/\b(low|later|whenever)\b/) ? 1 : 3;
-    const moduleId = findModuleId(text);
+    if (lower.match(/\b(urgent|asap|critical|now)\b/)) return 5;
+    if (lower.match(/\b(high|important|priority)\b/)) return 5;
+    if (lower.match(/\b(low|later|whenever)\b/)) return 1;
+    return 3; // Medium default
+  };
+
+  const detectModule = (text) => {
+    if (modules.length === 0) return null;
+
+    const lower = text.toLowerCase();
+    const words = lower.split(/\s+/);
+
+    // Check for exact module code match
+    for (const module of modules) {
+      const moduleCodeNorm = normalizeModuleCode(module.module_code);
+      for (const word of words) {
+        if (normalizeModuleCode(word) === moduleCodeNorm) {
+          return { id: module.id, code: module.module_code };
+        }
+      }
+    }
+
+    // Check for module name match (full or short)
+    for (const module of modules) {
+      const moduleName = module.module_name?.toLowerCase() || '';
+      const shortName = moduleName.split(' ')[0];
+
+      if (moduleName && lower.includes(moduleName)) {
+        return { id: module.id, code: module.module_code };
+      }
+
+      if (shortName && shortName.length > 2 && lower.includes(shortName)) {
+        return { id: module.id, code: module.module_code };
+      }
+    }
+
+    return null;
+  };
+
+  const removeParsedFragmentsFromTitle = (text, moduleInfo, deadline, priority) => {
+    let title = text;
+
+    // Remove module code
+    if (moduleInfo?.code) {
+      const codePattern = new RegExp(`\\b${normalizeModuleCode(moduleInfo.code).replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'gi');
+      title = title.replace(codePattern, '');
+    }
+
+    // Remove priority keywords
+    title = title.replace(/\b(urgent|asap|high|important|critical|now|priority|low|later|whenever)\b/gi, '');
+
+    // Remove date/time expressions in various formats
+    title = title.replace(/\b(today|tonight|tomorrow)\b/gi, '');
+    title = title.replace(/\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, '');
+    title = title.replace(/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, '');
+    title = title.replace(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*/gi, '');
+    
+    // Remove dates: 2026-05-20, 20/05/2026, 20/05, 20-05
+    title = title.replace(/\d{4}-\d{1,2}-\d{1,2}/g, '');
+    title = title.replace(/\d{1,2}[/-]\d{1,2}(?:[/-]\d{4})?/g, '');
+    
+    // Remove time: at 8pm, 8pm, 20:00, 8:30am
+    title = title.replace(/\b(?:at|@)\s*\d{1,2}(?::\d{2})?\s*(am|pm)?\b/gi, '');
+    title = title.replace(/\b\d{1,2}:\d{2}(?:\s*(am|pm))?\b/gi, ''); // 20:00 or 8:30pm
+    title = title.replace(/\b\d{1,2}\s*(am|pm)\b/gi, ''); // 8pm
+
+    // Remove connector words
+    title = title.replace(/\b(by|due|deadline|at|on|this)\b/gi, '');
+
+    // Clean up extra whitespace
+    title = title.trim().replace(/\s{2,}/g, ' ').trim();
+
+    return title;
+  };
+
+  const parseQuickTaskInput = (text) => {
+    const moduleInfo = detectModule(text);
+    const priority = detectPriority(text);
     const deadline = parseDeadline(text);
 
-    const title = normalizeText(
-      text
-        .replace(/\b(urgent|asap|high|important|critical|now|priority)\b/gi, '')
-        .replace(/\b(today|tomorrow|next\s+\w+|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, '')
-        .replace(/@?\s*\d{1,2}(?::\d{2})?\s*(am|pm)?\b/gi, '')
-        .replace(/\b(by|due|deadline|at|on)\b/gi, '')
-    );
-
-    const moduleLabel = moduleId
-      ? `${modules.find((m) => m.id === moduleId)?.module_code || ''}`
-      : '';
+    const title = removeParsedFragmentsFromTitle(text, moduleInfo, deadline, priority);
 
     return {
       title: title || text.trim(),
-      priority: priorityScore,
-      module_id: moduleId,
-      moduleLabel,
+      priority,
+      module_id: moduleInfo?.id || null,
+      moduleLabel: moduleInfo?.code || '',
       deadline,
     };
   };
 
   const updateQuickPreview = (value) => {
     const parsed = parseQuickTaskInput(value);
+    const deadlineDate = parsed.deadline ? new Date(parsed.deadline) : null;
+    const deadlineStr = deadlineDate ? deadlineDate.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + deadlineDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No deadline';
+    const priorityLabel = parsed.priority === 5 ? 'High' : parsed.priority === 1 ? 'Low' : 'Medium';
+
     setQuickParsePreview({
-      title: parsed.title,
-      module: parsed.moduleLabel || 'Not detected',
-      deadline: parsed.deadline ? new Date(parsed.deadline).toLocaleString() : 'No deadline found',
-      priority: parsed.priority === 5 ? 'High' : parsed.priority === 1 ? 'Low' : 'Medium'
+      title: parsed.title || '(title will be extracted)',
+      module: parsed.moduleLabel || '(not detected)',
+      deadline: deadlineStr,
+      priority: priorityLabel
     });
   };
 
@@ -568,18 +733,42 @@ export const Tasks = () => {
               Add Task
             </button>
           </div>
-          <div className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-2xl bg-white/10 backdrop-blur px-4 py-3 text-sm text-white border border-white/20">
-              <span className="font-semibold">Priority:</span> {quickParsePreview.priority}
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl bg-white/10 backdrop-blur px-4 py-3 text-sm text-white border border-white/20 transition hover:bg-white/20 hover:border-white/40 animate-in fade-in duration-300">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🎯</span>
+                <div>
+                  <span className="block font-bold text-white/80 text-xs uppercase">Priority</span>
+                  <span className={`${quickParsePreview.priority === 'High' ? 'text-red-300' : quickParsePreview.priority === 'Low' ? 'text-blue-300' : 'text-amber-300'} font-semibold`}>{quickParsePreview.priority}</span>
+                </div>
+              </div>
             </div>
-            <div className="rounded-2xl bg-white/10 backdrop-blur px-4 py-3 text-sm text-white border border-white/20">
-              <span className="font-semibold">Due:</span> {quickParsePreview.deadline || 'No deadline'}
+            <div className="rounded-2xl bg-white/10 backdrop-blur px-4 py-3 text-sm text-white border border-white/20 transition hover:bg-white/20 hover:border-white/40 animate-in fade-in duration-300 delay-100">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📅</span>
+                <div>
+                  <span className="block font-bold text-white/80 text-xs uppercase">Due</span>
+                  <span className="font-semibold text-emerald-300 truncate">{quickParsePreview.deadline}</span>
+                </div>
+              </div>
             </div>
-            <div className="rounded-2xl bg-white/10 backdrop-blur px-4 py-3 text-sm text-white border border-white/20">
-              <span className="font-semibold">Module:</span> {quickParsePreview.module || 'Not detected'}
+            <div className="rounded-2xl bg-white/10 backdrop-blur px-4 py-3 text-sm text-white border border-white/20 transition hover:bg-white/20 hover:border-white/40 animate-in fade-in duration-300 delay-200">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📚</span>
+                <div>
+                  <span className="block font-bold text-white/80 text-xs uppercase">Module</span>
+                  <span className={`font-semibold ${quickParsePreview.module.includes('not detected') ? 'text-slate-300' : 'text-blue-300'}`}>{quickParsePreview.module}</span>
+                </div>
+              </div>
             </div>
-            <div className="rounded-2xl bg-white/10 backdrop-blur px-4 py-3 text-sm text-white border border-white/20 truncate">
-              <span className="font-semibold">Title:</span> {quickParsePreview.title || 'Type to preview'}
+            <div className="rounded-2xl bg-white/10 backdrop-blur px-4 py-3 text-sm text-white border border-white/20 transition hover:bg-white/20 hover:border-white/40 animate-in fade-in duration-300 delay-300">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-lg flex-shrink-0">✨</span>
+                <div className="min-w-0">
+                  <span className="block font-bold text-white/80 text-xs uppercase">Title</span>
+                  <span className="font-semibold text-slate-200 truncate">{quickParsePreview.title || '(type to preview)'}</span>
+                </div>
+              </div>
             </div>
           </div>
         </form>
