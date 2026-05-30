@@ -145,21 +145,26 @@ export const Register = () => {
             />
           </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-3 rounded-xl hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-200"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                Creating account...
-              </span>
-            ) : (
-              'Create account'
-            )}
-          </button>
+        {/* Submit Button */}
+<button
+  type="submit"
+  disabled={loading}
+  style={{
+    width: '100%',
+    backgroundColor: '#2563eb',
+    color: '#ffffff',
+    fontWeight: '600',
+    padding: '12px 16px',
+    borderRadius: '12px',
+    border: 'none',
+    marginTop: '8px',
+    cursor: loading ? 'not-allowed' : 'pointer',
+    opacity: loading ? 0.7 : 1,
+    display: 'block',
+  }}
+>
+  {loading ? 'Creating account...' : 'Create account'}
+</button>
         </div>
 
         {/* Login Link */}

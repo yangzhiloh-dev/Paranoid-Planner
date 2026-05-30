@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import PrimaryButton from '../components/PrimaryButton';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
@@ -96,20 +97,9 @@ export const Login = () => {
           </div>
 
           {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-3 rounded-xl hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-200"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                Signing in...
-              </span>
-            ) : (
-              'Sign in'
-            )}
-          </button>
+          <PrimaryButton loading={loading}>
+            {loading ? 'Signing in...' : 'Sign in'}
+          </PrimaryButton>
         </div>
 
         {/* Register Link */}
