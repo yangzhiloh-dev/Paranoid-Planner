@@ -73,9 +73,15 @@ const createTask = async (req, res) => {
       return res.status(400).json({ error: 'Description must be 1000 characters or less' });
     }
 
-    // Validate estimated_minutes
-    if (estimated_minutes !== undefined) {
-      if (typeof estimated_minutes !== 'number' || estimated_minutes < 0) {
+    // Validate estimated_minutes (optional)
+    if (
+      estimated_minutes !== undefined &&
+      estimated_minutes !== null &&
+      estimated_minutes !== ''
+    ) {
+      const estimated = Number(estimated_minutes);
+
+      if (!Number.isFinite(estimated) || estimated <= 0) {
         return res.status(400).json({ error: 'Estimated minutes must be a positive number' });
       }
     }
@@ -106,13 +112,19 @@ const createTask = async (req, res) => {
       return res.status(400).json({ error: 'Preferred end time must be in HH:MM or HH:MM:SS format' });
     }
 
+    // Prepare estimated value for insertion (null when empty)
+    const estimatedValue =
+      estimated_minutes === '' || estimated_minutes === null || estimated_minutes === undefined
+        ? null
+        : Number(estimated_minutes);
+
     // Insert new task
     const result = await pool.query(
       `INSERT INTO tasks
         (user_id, module_id, title, description, deadline, estimated_minutes, priority, preferred_start_time, preferred_end_time)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id, user_id, module_id, title, description, deadline, estimated_minutes, priority, status, preferred_start_time, preferred_end_time, created_at, updated_at`,
-      [userId, module_id, title, description || null, deadline || null, estimated_minutes || null, priority || 1, preferred_start_time || null, preferred_end_time || null]
+      [userId, module_id, title, description || null, deadline || null, estimatedValue, priority || 1, preferred_start_time || null, preferred_end_time || null]
     );
 
     const newTask = result.rows[0];
@@ -171,11 +183,14 @@ const updateTask = async (req, res) => {
     }
 
     if (estimated_minutes !== undefined) {
-      if (typeof estimated_minutes !== 'number' || estimated_minutes < 0) {
-        return res.status(400).json({ error: 'Estimated minutes must be a positive number' });
+      if (estimated_minutes !== null && estimated_minutes !== '') {
+        const estimated = Number(estimated_minutes);
+        if (!Number.isFinite(estimated) || estimated <= 0) {
+          return res.status(400).json({ error: 'Estimated minutes must be a positive number' });
+        }
       }
       updates.push(`estimated_minutes = $${paramCount++}`);
-      params.push(estimated_minutes);
+      params.push(estimated_minutes === '' || estimated_minutes === null ? null : Number(estimated_minutes));
     }
 
     if (priority !== undefined) {
