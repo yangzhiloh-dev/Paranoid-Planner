@@ -126,9 +126,7 @@ Possible future improvements include:
 ## Smart Guided Task Creator
 
 ### [Proposed]
-The Smart Guided Task Creator should help users create tasks more easily through structured options instead of typing everything manually.
-
-Users can select options such as module, task type, urgency level, and deadline.
+A guided task creation flow where users select module, task type, urgency, deadline, and optional details to quickly create structured tasks.
 
 ### [Current Progress]
 The Smart Guided Task Creator has been implemented.

@@ -212,10 +212,10 @@ export const Tasks = () => {
 
                 <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <PrimaryButton type="button" onClick={() => { setShowCreateForm((s) => !s); setEditingTask(null); resetTaskForm(); }} className="w-auto rounded-xl px-6 py-3 font-semibold">
-                        {showCreateForm ? '? Cancel' : '+ Create Task'}
+                        {showCreateForm ? 'Cancel' : '+ Create Task'}
                     </PrimaryButton>
                     <PrimaryButton type="button" onClick={() => setShowBulkImportModal(true)} className="w-auto rounded-xl px-6 py-3 font-semibold">
-                        ?? Bulk Import
+                        📥 Bulk Import
                     </PrimaryButton>
                 </div>
 
@@ -226,7 +226,10 @@ export const Tasks = () => {
                 {loading ? (
                     <div className="flex items-center justify-center py-12">
                         <div className="space-y-4 text-center">
-                            <div className="animate-spin text-4xl">??</div>
+                            <svg className="animate-spin h-10 w-10 text-slate-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                            </svg>
                             <p className="text-slate-600 font-medium">Loading tasks...</p>
                         </div>
                     </div>
