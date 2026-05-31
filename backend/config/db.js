@@ -5,10 +5,12 @@ const { Pool } = require('pg');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
-console.log('🔍 [DB Config] Checking database configuration...');
+console.log('[DB Config] Checking database configuration...');
 
+// If DATABASE_URL exists, use it for connection(for Neon/Render deployments)
 const usingDatabaseUrl = !!process.env.DATABASE_URL;
 
+// Log whether required database environment variables are loaded (No passwords or full connection strings logged)
 console.log('✓ DATABASE_URL loaded:', usingDatabaseUrl);
 console.log('✓ DB_HOST loaded:', !!process.env.DB_HOST);
 console.log('✓ DB_PORT loaded:', !!process.env.DB_PORT);
