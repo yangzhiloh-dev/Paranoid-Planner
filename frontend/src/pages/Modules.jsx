@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
 import { modulesAPI } from '../api/api';
+import PrimaryButton from '../components/PrimaryButton';
 
 const ModuleCard = ({ module, onEdit, onDelete }) => (
   <div
@@ -134,12 +135,13 @@ const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing }) => {
             >
               Cancel
             </button>
-            <button
+            <PrimaryButton
               type="submit"
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 rounded-xl font-semibold transition-all"
+              className="flex-1 px-4 py-3 rounded-xl font-semibold transition-all"
+              style={{ width: 'auto', backgroundColor: '#2563eb', color: '#000000' }}
             >
               {isEditing ? 'Update' : 'Create'}
-            </button>
+            </PrimaryButton>
           </div>
         </form>
       </div>
@@ -257,12 +259,14 @@ export const Modules = () => {
               Organize your coursework and learning materials
             </p>
           </div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
-          >
-            + Create Module
-          </button>
+         <PrimaryButton
+          type="button"
+          onClick={() => setShowForm(true)}
+          className="px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
+          style={{ width: 'auto', backgroundColor: '#2563eb', color: '#000000' }}
+        >
+          + Create Module
+        </PrimaryButton>
         </div>
 
         {/* Error Message */}
@@ -312,12 +316,14 @@ export const Modules = () => {
               Create your first module to start organizing your courses and
               learning materials
             </p>
-            <button
-              onClick={() => setShowForm(true)}
-              className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
+            <PrimaryButton
+           type="button"
+           onClick={() => setShowForm(true)}
+           className="px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
+           style={{ width: 'auto', backgroundColor: '#2563eb', color: '#000000' }}
             >
-              Create first module
-            </button>
+                      + Create Module
+            </PrimaryButton>
           </div>
         ) : (
           // Module Grid

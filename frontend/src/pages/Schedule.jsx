@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
 import { scheduleAPI } from '../api/api';
+import PrimaryButton from '../components/PrimaryButton';
 
 export const Schedule = () => {
   const [schedule, setSchedule] = useState([]);
@@ -48,13 +49,15 @@ export const Schedule = () => {
 
         {error && <p className="text-red-500 mb-4">{error}</p>}
 
-        <button
+        <PrimaryButton
+          type="button"
           onClick={handleGenerateSchedule}
+          loading={generating}
           disabled={generating}
-          className="bg-blue-500 text-white px-4 py-2 rounded mb-4 disabled:opacity-50"
+          className="w-auto px-4 py-2 rounded mb-4"
         >
           {generating ? 'Generating...' : 'Generate Schedule'}
-        </button>
+        </PrimaryButton>
 
         {loading ? (
           <p>Loading schedule...</p>

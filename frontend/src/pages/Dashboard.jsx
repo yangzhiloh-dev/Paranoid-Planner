@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Navbar } from '../components/Navbar';
 import { modulesAPI, tasksAPI, scheduleAPI } from '../api/api';
+import PrimaryButton from '../components/PrimaryButton';
 
 // ============ MODERN STAT CARD ============
 const ModernStatCard = ({ icon, label, value, color, trend, unitLabel }) => (
@@ -16,16 +17,16 @@ const ModernStatCard = ({ icon, label, value, color, trend, unitLabel }) => (
     <div className="relative z-10">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <p className="text-sm font-medium text-white/70 mb-1">{label}</p>
+          <p className="text-sm font-medium text-black/70 mb-1">{label}</p>
           <div className="flex items-baseline gap-1">
-            <p className="text-4xl font-bold text-white">{value}</p>
-            {unitLabel && <p className="text-sm text-white/60">{unitLabel}</p>}
+            <p className="text-4xl font-bold text-black">{value}</p>
+            {unitLabel && <p className="text-sm text-black/60">{unitLabel}</p>}
           </div>
         </div>
         <div className="text-3xl opacity-80 group-hover:scale-110 transition-transform duration-300">{icon}</div>
       </div>
       {trend && (
-        <div className="flex items-center gap-1 text-sm text-white/70">
+        <div className="flex items-center gap-1 text-sm text-black/70">
           <span>↑</span>
           <span>{trend}</span>
         </div>
@@ -50,14 +51,14 @@ const TodaysFocusCard = ({ task, module }) => {
     : null;
 
   return (
-    <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 p-8 text-white overflow-hidden relative group hover:shadow-xl transition-all duration-300 border border-blue-400/20">
+    <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 p-8 text-black overflow-hidden relative group hover:shadow-xl transition-all duration-300 border border-blue-400/20">
       {/* Animated background elements */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
       
       <div className="relative z-10">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <p className="text-blue-100 text-sm font-semibold mb-1">TODAY'S PRIMARY FOCUS</p>
+            <p className="text-black-100 text-sm font-semibold mb-1">TODAY'S PRIMARY FOCUS</p>
             <h3 className="text-2xl font-bold leading-tight">{task.title}</h3>
           </div>
           <span className="text-4xl">{getPriorityIcon(task.priority)}</span>
@@ -118,7 +119,7 @@ const WeeklyProgressWidget = () => {
                   style={{ height: `${percentage || 5}%` }}
                 ></div>
               </div>
-              <p className={`text-xs font-semibold ${isToday ? 'text-blue-600' : 'text-gray-600'}`}>{day}</p>
+              <p className={`text-xs font-semibold ${isToday ? 'text-black-600' : 'text-gray-600'}`}>{day}</p>
               <p className="text-xs text-gray-500">{hours}h</p>
             </div>
           );
@@ -136,7 +137,7 @@ const ModuleShowcase = ({ modules }) => {
     <div className="rounded-2xl bg-white border border-gray-200 p-6 hover:shadow-lg transition-all duration-300">
       <div className="flex items-center justify-between mb-5">
         <h3 className="text-lg font-bold text-gray-900">Your Modules</h3>
-        <Link to="/modules" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+        <Link to="/modules" className="text-sm text-black-600 hover:text-black-700 font-medium flex items-center gap-1">
           View all <span>→</span>
         </Link>
       </div>
@@ -145,13 +146,13 @@ const ModuleShowcase = ({ modules }) => {
         {modules.slice(0, 6).map((module) => (
           <div key={module.id} className="group relative">
             <div
-              className="w-12 h-12 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 hover:scale-110 cursor-pointer flex items-center justify-center font-bold text-white text-sm"
+              className="w-12 h-12 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 hover:scale-110 cursor-pointer flex items-center justify-center font-bold text-black text-sm"
               style={{ backgroundColor: module.color || '#3B82F6' }}
               title={module.module_name}
             >
               {module.module_code.substring(0, 2).toUpperCase()}
             </div>
-            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-balck text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
               {module.module_code}
             </div>
           </div>
@@ -204,12 +205,12 @@ const TaskTimelineCard = ({ task, index }) => {
               <h4 className="font-semibold text-gray-900">{task.title}</h4>
               <p className="text-xs text-gray-500 mt-1">{task.description?.substring(0, 60)}{task.description?.length > 60 ? '...' : ''}</p>
             </div>
-            {isToday && <span className="px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-lg">TODAY</span>}
+            {isToday && <span className="px-2 py-1 bg-blue-600 text-black text-xs font-bold rounded-lg">TODAY</span>}
           </div>
 
           <div className="flex items-center gap-2 mt-3 flex-wrap text-xs text-gray-600">
             {task.deadline && (
-              <span className={`${isOverdue ? 'text-red-600 font-bold' : isToday ? 'text-blue-600' : ''}`}>
+              <span className={`${isOverdue ? 'text-red-600 font-bold' : isToday ? 'text-black-600' : ''}`}>
                 📅 {isOverdue ? 'Overdue' : isToday ? 'Due today' : `Due ${new Date(task.deadline).toLocaleDateString()}`}
               </span>
             )}
@@ -229,11 +230,14 @@ const EmptyStateCard = ({ icon, title, description, buttonText, buttonLink }) =>
     <div className="text-5xl mb-4">{icon}</div>
     <p className="font-semibold text-gray-900 mb-1">{title}</p>
     <p className="text-gray-600 text-sm mb-6">{description}</p>
-    <Link
-      to={buttonLink}
-      className="inline-block px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-200 text-sm font-semibold"
-    >
-      {buttonText}
+    <Link to={buttonLink} className="inline-block">
+      <PrimaryButton
+        type="button"
+        className="px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 text-sm"
+        style={{ width: 'auto', backgroundColor: '#2563eb', color: '#000000' }}
+      >
+        {buttonText}
+      </PrimaryButton>
     </Link>
   </div>
 );
@@ -406,7 +410,7 @@ export const Dashboard = () => {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-700">Module Progress</span>
-                      <span className="text-sm font-bold text-blue-600">{modules.length}</span>
+                      <span className="text-sm font-bold text-black-600">{modules.length}</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
@@ -461,7 +465,7 @@ export const Dashboard = () => {
                     <h2 className="text-2xl font-bold text-gray-900">Task Timeline</h2>
                     <p className="text-sm text-gray-600 mt-1">Your upcoming priorities</p>
                   </div>
-                  <Link to="/tasks" className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-1">
+                  <Link to="/tasks" className="text-black-600 hover:text-black-700 font-medium text-sm flex items-center gap-1">
                     View all <span>→</span>
                   </Link>
                 </div>
@@ -478,37 +482,37 @@ export const Dashboard = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
               <Link
                 to="/modules"
-                className="group relative rounded-2xl overflow-hidden bg-gradient-to-br from-blue-600 to-blue-700 p-6 text-white hover:shadow-xl transition-all duration-300 hover:scale-105"
+                className="group relative rounded-2xl overflow-hidden bg-gradient-to-br from-blue-600 to-blue-700 p-6 text-black hover:shadow-xl transition-all duration-300 hover:scale-105"
               >
                 <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative z-10">
                   <div className="text-3xl mb-3">📚</div>
                   <p className="font-bold text-lg">Manage Modules</p>
-                  <p className="text-blue-100 text-sm mt-1">Organize your coursework</p>
+                  <p className="text-black-100 text-sm mt-1">Organize your coursework</p>
                 </div>
               </Link>
 
               <Link
                 to="/tasks"
-                className="group relative rounded-2xl overflow-hidden bg-gradient-to-br from-purple-600 to-purple-700 p-6 text-white hover:shadow-xl transition-all duration-300 hover:scale-105"
+                className="group relative rounded-2xl overflow-hidden bg-gradient-to-br from-purple-600 to-purple-700 p-6 text-black hover:shadow-xl transition-all duration-300 hover:scale-105"
               >
                 <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative z-10">
                   <div className="text-3xl mb-3">✨</div>
                   <p className="font-bold text-lg">Manage Tasks</p>
-                  <p className="text-purple-100 text-sm mt-1">Plan your work</p>
+                  <p className="text-black-100 text-sm mt-1">Plan your work</p>
                 </div>
               </Link>
 
               <Link
                 to="/schedule"
-                className="group relative rounded-2xl overflow-hidden bg-gradient-to-br from-orange-600 to-orange-700 p-6 text-white hover:shadow-xl transition-all duration-300 hover:scale-105"
+                className="group relative rounded-2xl overflow-hidden bg-gradient-to-br from-orange-600 to-orange-700 p-6 text-black hover:shadow-xl transition-all duration-300 hover:scale-105"
               >
                 <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative z-10">
                   <div className="text-3xl mb-3">📅</div>
                   <p className="font-bold text-lg">Generate Schedule</p>
-                  <p className="text-orange-100 text-sm mt-1">Optimize your time</p>
+                  <p className="text-black-100 text-sm mt-1">Optimize your time</p>
                 </div>
               </Link>
             </div>

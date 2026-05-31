@@ -4,6 +4,7 @@
 import { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import PrimaryButton from './PrimaryButton';
 
 export const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
@@ -70,12 +71,14 @@ export const Navbar = () => {
             </div>
           </div>
 
-          <button
+         <PrimaryButton
+            type="button"
             onClick={handleLogout}
-            className="ml-4 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200"
+            className="ml-4 px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200"
+            style={{ width: 'auto', backgroundColor: '#f3f4f6', color: '#000000' }}
           >
             Logout
-          </button>
+          </PrimaryButton>
         </div>
       </div>
 
