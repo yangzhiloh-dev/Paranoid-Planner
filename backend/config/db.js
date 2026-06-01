@@ -5,15 +5,17 @@ const { Pool } = require('pg');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
-console.log('🔍 [DB Config] Checking database configuration...');
+//debugging info to verify environment variables are loaded correctly
+
+console.log(' [DB Config] Checking database configuration');
 
 const usingDatabaseUrl = !!process.env.DATABASE_URL;
 
-console.log('✓ DATABASE_URL loaded:', usingDatabaseUrl);
-console.log('✓ DB_HOST loaded:', !!process.env.DB_HOST);
-console.log('✓ DB_PORT loaded:', !!process.env.DB_PORT);
-console.log('✓ DB_USER loaded:', !!process.env.DB_USER);
-console.log('✓ DB_NAME loaded:', !!process.env.DB_NAME);
+console.log('DATABASE_URL loaded:', usingDatabaseUrl);
+console.log('DB_HOST loaded:', !!process.env.DB_HOST);
+console.log('DB_PORT loaded:', !!process.env.DB_PORT);
+console.log('DB_USER loaded:', !!process.env.DB_USER);
+console.log('DB_NAME loaded:', !!process.env.DB_NAME);
 
 const pool = new Pool(
   usingDatabaseUrl
@@ -37,7 +39,7 @@ pool.on('connect', () => {
 });
 
 pool.on('error', (err) => {
-  console.error('✗ Unexpected error on idle client:', err.message);
+  console.error('Unexpected error on idle client:', err.message);
 });
 
 pool.query('SELECT NOW()', (err) => {

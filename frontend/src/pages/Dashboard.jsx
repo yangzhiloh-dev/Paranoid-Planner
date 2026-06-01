@@ -1,5 +1,5 @@
 // Dashboard Page - Modern Study OS Interface
-// Highly engaging, gamified productivity dashboard
+// Highly engaging, gamified productivity dashboard(to do)
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';

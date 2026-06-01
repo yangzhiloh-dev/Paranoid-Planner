@@ -1,5 +1,5 @@
-// Navbar Component
-// Navigation bar with logout button
+// Navbar Component which contains navbar with logout button
+
 
 import { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';

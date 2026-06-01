@@ -1,23 +1,22 @@
-// Scheduler Service
-// Implements the scheduling algorithm for generating study sessions
+// Implementing basic scheduling logic
 
 const pool = require('../config/db');
 
-// Helper: Get the start of day
+/* Helper List */
+// startOfDay: getting start of the day for a given date 
 const startOfDay = (date) => {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   return d;
 };
 
-// Helper: Add hours to a date
+
 const addHours = (date, hours) => {
   const d = new Date(date);
   d.setHours(d.getHours() + hours);
   return d;
 };
 
-// Helper: Add days to a date
 const addDays = (date, days) => {
   const d = new Date(date);
   d.setDate(d.getDate() + days);
@@ -164,7 +163,7 @@ const generateSchedule = async (userId, pool) => {
         currentDay = addDays(currentDay, 1);
       }
 
-      // Log if we couldn't allocate all blocks
+      // Log if we couldn't allocate all blocks(debugging info)
       if (blocksAllocated < numBlocks) {
         console.warn(
           `Could only allocate ${blocksAllocated}/${numBlocks} blocks for task "${task.title}" (deadline: ${deadline})`

@@ -15,7 +15,7 @@ const generateToken = (userId) => {
 // Register a new user
 const register = async (req, res) => {
   try {
-    console.log('📤 [Register Endpoint] Received request with body:', {
+    console.log('[Register Endpoint] Received request with body:', {
       email: req.body.email,
       name: req.body.name,
       hasPassword: !!req.body.password,

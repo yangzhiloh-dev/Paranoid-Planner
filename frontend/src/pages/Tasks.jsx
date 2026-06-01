@@ -215,7 +215,7 @@ export const Tasks = () => {
                         {showCreateForm ? '? Cancel' : '+ Create Task'}
                     </PrimaryButton>
                     <PrimaryButton type="button" onClick={() => setShowBulkImportModal(true)} className="w-auto rounded-xl px-6 py-3 font-semibold">
-                        ?? Bulk Import
+                         Bulk Import
                     </PrimaryButton>
                 </div>
 

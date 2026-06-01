@@ -3,7 +3,7 @@ const BulkImportModal = ({ bulkImportText, setBulkImportText, onClose, onSubmit,
         <div className="w-full max-w-2xl rounded-3xl bg-white p-8 shadow-2xl">
             <div className="mb-6 flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold text-slate-900">📥 Bulk Import Tasks</h2>
+                    <h2 className="text-2xl font-bold text-slate-900"> Bulk Import Tasks</h2>
                     <p className="mt-1 text-sm text-slate-600">
                         Paste one task per line. If module code is present it will be used, otherwise first module is fallback.
                     </p>

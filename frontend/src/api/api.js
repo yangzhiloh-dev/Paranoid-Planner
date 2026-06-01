@@ -5,7 +5,7 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-console.log('🔍 [API] Initializing with baseURL:', API_URL);
+console.log(' [API] Initializing with baseURL:', API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
@@ -19,7 +19,7 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    console.log('📤 [API Request]', config.method.toUpperCase(), config.url, {
+    console.log(' [API Request]', config.method.toUpperCase(), config.url, {
       hasToken: !!token,
       data: config.data,
     });
@@ -31,11 +31,11 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
-    console.log('📥 [API Response]', response.status, response.config.url);
+    console.log(' [API Response]', response.status, response.config.url);
     return response;
   },
   (error) => {
-    console.error('❌ [API Error]', {
+    console.error(' [API Error]', {
       status: error.response?.status,
       message: error.response?.data?.error || error.message,
       url: error.config?.url,

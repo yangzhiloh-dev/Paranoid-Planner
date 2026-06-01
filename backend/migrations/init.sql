@@ -1,5 +1,5 @@
 -- ParanoidPlanner Database Schema
--- Run this file to initialize the database
+-
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (

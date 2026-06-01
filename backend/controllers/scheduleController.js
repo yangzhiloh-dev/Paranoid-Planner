@@ -4,19 +4,11 @@
 const pool = require('../config/db');
 const schedulerService = require('../services/schedulerService');
 
-// Generate a new schedule
+// Generating a new schedule
 const generateSchedule = async (req, res) => {
   try {
     const userId = req.user.id;
-
-    // First, clear any existing scheduled sessions (optional - for clean regeneration)
-    // Uncomment if you want to clear old schedules on regenerate:
-    // await pool.query(
-    //   'DELETE FROM study_sessions WHERE user_id = $1 AND status = $\'scheduled\'',
-    //   [userId]
-    // );
-
-    // Generate new schedule
+   
     const result = await schedulerService.generateSchedule(userId, pool);
 
     res.json({
