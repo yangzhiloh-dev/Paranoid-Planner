@@ -1,438 +1,355 @@
-# Milestone I Submission
+# ParanoidPlanner
+### Adaptive Study Scheduling for University Students
 
-## Team Name:
-Yinyang
-
-## Proposed Level of Achievement:
-Apollo
+**Team Name:** Yinyang
+**Proposed Level of Achievement:** Apollo
 
 ---
 
-# Motivation
-As university students ourselves, we understand how difficult it can be to manage multiple modules, assignments, quizzes, projects, and deadlines at the same time. Important academic tasks are often spread across different platforms such as notes, spreadsheets, calendars, and learning management systems.
+## Overview
 
-This can make planning confusing and stressful, especially when deadlines overlap or when students are unsure of what to prioritise first.
+ParanoidPlanner is a full-stack academic productivity web application designed to help university students manage their workload more effectively.
 
-Through ParanoidPlanner, we hope to create a simple academic planning tool that helps students organise their workload in one place. Instead of manually tracking everything across different apps, students can use ParanoidPlanner to manage modules, create tasks, track deadlines, and generate study schedules.
+Students often juggle multiple modules, assignments, quizzes, projects, revision sessions, and examinations simultaneously. Academic information is frequently scattered across different platforms such as calendars, spreadsheets, learning management systems, and personal notes.
 
-In the process of building this project, we also hope to improve our understanding of full-stack web development, database design, authentication, deployment, and software engineering practices.
+ParanoidPlanner provides a centralized platform where students can:
 
----
-
-# Vision
-ParanoidPlanner will be a web-based productivity application designed for university students.
-
-The application helps students manage academic workload by organising modules, tasks, deadlines, priorities, and study sessions in one platform.
-
-Ultimately, we envision ParanoidPlanner as a simple but useful academic planner that reduces the mental load of planning and helps students focus on completing their work more effectively.
-
-In the future, the application can be expanded with smarter scheduling, calendar integration, reminders, collaborative study planning, and mobile support.
+- Organize modules
+- Create and manage academic tasks
+- Prioritize work
+- Track progress
+- Generate study schedules
+- Visualize workload through dashboards
 
 ---
 
-# Scope of Project
-ParanoidPlanner is a full-stack web application for academic workload management.
+## Motivation
 
-Students will be able to create modules, add academic tasks, assign deadlines and priority levels, view task progress, and generate study schedules.
+University students today constantly juggle heavy academic workloads alongside extracurricular commitments, often losing productivity to digital distractions, procrastination, and the sheer complexity of managing multiple deadlines. While existing productivity tools such as Notion are popular, they are typically too generic, require a lot of manual setup, or fail to adapt to fluctuating workloads or automatically reallocate tasks to prevent burnout.
 
-ParanoidPlanner’s features are outlined in the following sections, organised by the following tags:
+ParanoidPlanner bridges this gap by creating a smart, automated platform specifically tailored to the realities of academic life — optimizing study schedules, automatically adjusting workloads when students fall behind, and integrating seamlessly with existing tools like Notion and Google Calendar.
 
-**[Proposed]** - features planned for the project
-**[Current Progress]** - current progress of the feature
-**[Additional Features]** - possible features to improve the product after the MVP is completed
+This project also allows us to strengthen our understanding of:
+
+- Full-stack web development
+- Database design
+- Authentication systems
+- Cloud deployment
+- Software engineering practices
 
 ---
 
-# Features
+## Problem Statement
 
-## User Authentication
+Students often face difficulties with:
 
-### [Proposed]
-Users should be able to register and log in securely. Each user should only be able to access their own modules, tasks, and schedules.
+- Tracking deadlines across multiple modules
+- Prioritizing urgent work
+- Managing large numbers of assignments
+- Maintaining consistent study schedules
+- Visualizing overall workload
 
-### [Current Progress]
-The authentication system has been implemented.
+Current solutions often require users to manually piece together information across multiple applications. ParanoidPlanner aims to solve this by providing a unified academic planning platform.
 
-Users are currently able to:
+---
 
-- Register a new account
-- Log in to an existing account
-- Access protected routes using JWT authentication
-- Store passwords securely using bcrypt
+## Vision
 
-### [Additional Features]
-Possible future improvements include:
+We envision ParanoidPlanner as an intelligent academic companion that helps students make better decisions about their time and workload.
 
+The long-term vision includes:
+
+- Adaptive scheduling
+- Calendar integration
+- Reminder systems
+- Workload forecasting
+- Study analytics
+- Personalized recommendations
+
+---
+
+## Target Users
+
+- University students
+- Polytechnic students
+- Junior college students
+- Self-directed learners
+
+---
+
+## User Stories
+
+| Feature | Story |
+|---|---|
+| Academic Planning | As a student, I want to organize my modules in one place so that I can easily manage all my coursework. |
+| Task Management | As a student, I want to create and prioritize tasks so that I know what work should be completed first. |
+| Progress Tracking | As a student, I want to track task completion so that I can monitor my productivity. |
+| Schedule Planning | As a student, I want to generate study schedules so that I can plan my revision more effectively. |
+| Workload Visualization | As a student, I want to view workload statistics so that I can better understand my academic commitments. |
+
+---
+
+## Features
+
+> Tags used:
+> - **[Proposed]** — Planned functionality
+> - **[Current Progress]** — Features already implemented
+> - **[Additional Features]** — Future enhancements after the MVP
+
+### 🔐 User Authentication
+
+**[Proposed]** Users should be able to securely create and access personal accounts.
+
+**[Current Progress]**
+- User registration
+- User login
+- Protected routes
+- Password hashing using bcrypt
+
+**[Additional Features]**
 - Password reset
+- JWT authentication
 - Email verification
-- Google login
+- Google authentication
 
 ---
 
-## Module Management
+### 📚 Module Management
 
-### [Proposed]
-Users should be able to create modules based on the courses they are taking. These modules help organise academic tasks clearly.
+**[Proposed]** Users should be able to organize their academic modules.
 
-### [Current Progress]
-The module management system has been implemented.
-
-Users are currently able to:
-
+**[Current Progress]**
 - Create modules
 - View modules
 - Edit modules
 - Delete modules
 
-Each module can contain information such as module code, module name, and description.
+Module information includes: module code, module name, and description.
 
-### [Additional Features]
-Possible future improvements include:
-
-- Module colour labels
+**[Additional Features]**
+- Colour coding
 - Semester grouping
-- Module workload summary
+- Module analytics
 
 ---
 
-## Task Management
+### ✅ Task Management
 
-### [Proposed]
-Users should be able to create and manage academic tasks. Each task should include important information such as deadline, priority, status, and completion.
+**[Proposed]** Users should be able to manage academic tasks efficiently.
 
-### [Current Progress]
-The task management system has been implemented.
-
-Users are currently able to:
-
+**[Current Progress]**
 - Create tasks
-- View tasks
 - Edit tasks
 - Delete tasks
-- Set deadlines
-- Set priority levels
-- Mark tasks as completed
+- Deadline tracking
+- Priority tracking
+- Task completion
 
-### [Additional Features]
-Possible future improvements include:
-
+**[Additional Features]**
 - Recurring tasks
 - Subtasks
 - Task reminders
-- Estimated time needed for each task
+- Time estimation
 
 ---
 
-## Smart Guided Task Creator
+### 🧠 Smart Guided Task Creator
 
-### [Proposed]
-The Smart Guided Task Creator should help users create tasks more easily through structured options instead of typing everything manually.
+**[Proposed]** A guided task creation system that reduces manual input.
 
-Users can select options such as module, task type, urgency level, and deadline.
-
-### [Current Progress]
-The Smart Guided Task Creator has been implemented.
-
-It currently supports:
-
+**[Current Progress]**
 - Module selection
 - Task type selection
 - Urgency selection
-- Deadline picker
-- Auto-generated task titles
+- Deadline selection
+- Auto-generated titles
 
-### [Additional Features]
-Possible future improvements include:
-
+**[Additional Features]**
 - Natural language task creation
 - Suggested deadlines
-- Automatic task breakdown
+- Automatic task decomposition
 
 ---
 
-## Dashboard
+### 📊 Dashboard
 
-### [Proposed]
-The dashboard should give users a quick overview of their academic workload.
+**[Proposed]** Provide a high-level overview of academic workload.
 
-It should help students understand how many tasks they have, how many are completed, and which tasks are still pending.
-
-### [Current Progress]
-The dashboard has been implemented with basic statistics.
-
-It currently shows:
-
+**[Current Progress]**
 - Module statistics
 - Task statistics
 - Productivity overview
 - Workload summary
 
-### [Additional Features]
-Possible future improvements include:
-
+**[Additional Features]**
 - Weekly productivity charts
-- Upcoming deadline alerts
-- Module workload comparison
+- Deadline alerts
+- Trend analysis
 
 ---
 
-## Study Schedule
+### 📅 Study Schedule
 
-### [Proposed]
-The study schedule feature should help students plan study sessions based on their tasks and deadlines.
+**[Proposed]** Generate study schedules based on workload.
 
-### [Current Progress]
-The study schedule feature has been scaffolded.
+**[Current Progress]**
+- Schedule generation
+- Session display
+- Workload planning
 
-It currently supports:
-
-- Generating study sessions
-- Displaying planned workload
-- Helping users decide what to study next
-
-### [Additional Features]
-Possible future improvements include:
-
-- Better schedule optimisation
+**[Additional Features]**
+- Adaptive scheduling
 - Calendar integration
-- Custom study session duration
 - Automatic rescheduling
 
 ---
 
-## Kanban Workflow
+### 🗂️ Kanban Workflow
 
-### [Proposed]
-Users should be able to track their tasks visually using a Kanban-style workflow.
+**[Proposed]** Visual task tracking.
 
-Tasks should be grouped based on their progress.
-
-### [Current Progress]
-The current workflow includes:
-
+**[Current Progress]**
 - To Do
 - In Progress
 - Completed
 
-### [Additional Features]
-Possible future improvements include:
-
-- Drag-and-drop task movement
-- Filtering by module
-- Filtering by deadline
-- Filtering by priority
+**[Additional Features]**
+- Drag-and-drop workflow
+- Advanced filtering
+- Custom boards
 
 ---
 
-# Technology Stack
-AreaTechnology UsedFrontendReact, Vite, Tailwind CSSBackendNode.js, Express.jsDatabasePostgreSQL, NeonAuthenticationJWT, bcryptDeploymentVercel, RenderToolsGitHub, VS Code, Postman
+## Technology Stack
+
+| Area | Technology |
+|---|---|
+| Frontend | React 18.3.1, Vite 5.4.21, Tailwind CSS 3.4.19 |
+| Backend | Node.js 24.16.0, Express.js 4.22.2 |
+| Database | PostgreSQL 18, Neon PostgreSQL |
+| Authentication | JWT 9.0.3, Bcrypt 5.1.1 |
+| Deployment | Vercel (Frontend), Render (Backend) |
+| Tools | GitHub, VS Code, Postman |
+
 ---
 
-# System Architecture
-ParanoidPlanner uses a frontend-backend structure.
-
-The frontend handles the user interface. The backend handles the application logic, authentication, and API routes. The database stores users, modules, tasks, and schedule information.
+## System Architecture
 
 ```
-Browser / Client
-      |
-      v
-Vercel Frontend
-React + Vite
-      |
-      v
-Render Backend
-Node.js + Express
-      |
-      v
-Neon PostgreSQL Database
+Browser / User
+    └── Frontend Web App (React + Vite, deployed on Vercel)
+            └── Backend API (Node.js + Express.js, deployed on Render)
+                    └── Database (PostgreSQL, hosted on Neon)
 ```
 
 ---
 
-# Timeline and Development Plan
-MilestoneTaskDescriptionStatusMilestone 1IdeationFinalised project idea, problem statement, and target usersCompletedMilestone 1Frontend setupSet up React, Vite, Tailwind CSS, and basic pagesCompletedMilestone 1Backend setupSet up Node.js, Express, and backend routesCompletedMilestone 1Database setupConnected PostgreSQL database using NeonCompletedMilestone 1AuthenticationImplemented registration, login, JWT, and protected routesCompletedMilestone 1Module managementImplemented module CRUD functionsCompletedMilestone 1Task managementImplemented task CRUD functionsCompletedMilestone 1Smart Guided Task CreatorImplemented option-based task creationCompletedMilestone 1DashboardAdded basic task and module statisticsCompletedMilestone 1Study scheduleCreated basic study schedule featureIn ProgressMilestone 1DeploymentPrepared frontend and backend for deploymentIn ProgressMilestone 1DocumentationCreated README and testing instructionsCompleted
----
+## Database Design
 
-# Evaluation for Milestone 1
-For Milestone 1, ParanoidPlanner currently has a working full-stack foundation.
+**Core entities:**
 
-The current version includes:
+- **Users** — Stores account information
+- **Modules** — Stores module details belonging to users
+- **Tasks** — Stores academic tasks associated with modules
+- **Study Sessions** — Stores generated study schedules
 
-- User authentication
-- Module management
-- Task management
-- Smart Guided Task Creator
-- Dashboard overview
-- Basic study schedule feature
-- Backend API routes
-- PostgreSQL database connection
-- Deployment setup
-- Project documentation
-
-This version demonstrates the main workflow of the application and provides a strong base for future development.
-
----
-
-# Proof-of-Concept
-The proof-of-concept shows that users can complete the main academic planning workflow.
-
-A user can:
-
-1. Register an account.
-2. Log in securely.
-3. Create academic modules.
-4. Add tasks under modules.
-5. Set task deadlines and priorities.
-6. Track task progress.
-7. View dashboard statistics.
-8. Generate a basic study schedule.
-
-Demo video:
+**Relationships:**
 
 ```
-Replace this with your video demonstration link.
+User
+├── Modules
+│     └── Tasks
+└── Study Sessions
 ```
 
 ---
 
-# Work Log
-Refer to attached project log:
+## Software Engineering Practices
 
-```
-Replace this with your work log or spreadsheet link.
-```
+### Version Control
+GitHub is used for source control, branch management, and collaboration.
+
+### Modular Architecture
+The application is separated into frontend, backend, and database layers.
+
+### Security
+- Password hashing
+- Environment variable management
+
+### Deployment
+Continuous deployment through Vercel, Render, and Neon.
+
+### Testing
+- Authentication testing
+- CRUD testing
+- API testing
+- Deployment testing
 
 ---
 
-# Future Development
-After Milestone 1, we plan to improve ParanoidPlanner by adding:
+## Milestone 1 Progress
+
+| Milestone | Task | Status |
+|---|---|---|
+| MS1 | Frontend Setup | ✅ Completed |
+| MS1 | Backend Setup | ✅ Completed |
+| MS1 | Database Setup | ✅ Completed |
+| MS1 | Authentication | ✅ Completed |
+| MS1 | Module Management | ✅ Completed |
+| MS1 | Task Management | ✅ Completed |
+| MS1 | Dashboard | ✅ Completed |
+| MS1 | Deployment | ✅ Completed |
+
+---
+
+## Challenges Faced
+
+- Integrating frontend and backend systems
+- Designing database relationships
+- Handling deployment configuration
+- Maintaining clean project structure
+
+---
+
+## Lessons Learned
+
+- Importance of planning system architecture early
+- Benefits of modular development
+- Practical experience with cloud deployment
+- Importance of secure authentication
+- Effective use of Git for collaboration
+
+---
+
+## Future Development
+
+Planned features include:
 
 - Natural language task creation
+- Adaptive scheduling
 - Calendar integration
 - Deadline reminders
-- Better study schedule optimisation
-- Drag-and-drop Kanban board
-- Mobile-friendly design
-- Unit and integration testing
+- Drag-and-drop Kanban boards
+- Productivity analytics
+- Mobile responsiveness
 - Collaborative study planning
-- Offline support
 
 ---
 
-# Challenges Faced
-Some challenges faced during development include:
+## Live Application
 
-1. Connecting the frontend and backend smoothly.
-2. Implementing JWT authentication correctly.
-3. Designing database relationships between users, modules, tasks, and schedules.
-4. Managing environment variables locally and during deployment.
-5. Structuring the project clearly so that it is easy to maintain.
-6. Writing documentation that is simple and evaluator-friendly.
+🌐 **Frontend:** [https://paranoid-planner.vercel.app/](https://paranoid-planner.vercel.app/)
 
 ---
 
-# Lessons Learned
-Through this project, we learned that:
+## Team Information
 
-1. A clear project structure makes development easier.
-2. Frontend and backend responsibilities should be separated properly.
-3. API routes should be planned before connecting them to the frontend.
-4. Authentication must be handled carefully to protect user data.
-5. Database design is important because many features depend on it.
-6. Testing and deployment should be done early to avoid last-minute issues.
-
----
-
-# Installation Guide
-
-## Clone the Repository
-
-```
-git clone https://github.com//Paranoid-Planner.git
-cd Paranoid-Planner
-```
-
-## Install Backend Dependencies
-
-```
-cd backend
-npm install
-```
-
-## Install Frontend Dependencies
-
-```
-cd ../frontend
-npm install
-```
-
----
-
-# Local Development
-
-## Start Backend
-
-```
-cd backend
-npm run dev
-```
-
-## Start Frontend
-
-```
-cd frontend
-npm run dev
-```
-The frontend usually runs at:
-
-```
-http://localhost:5173
-```
-The backend usually runs at:
-
-```
-http://localhost:5000
-```
-
----
-
-# Testing Instructions
-Suggested testing flow:
-
-1. Register a new account.
-2. Log in.
-3. Create a new module.
-4. Edit the module.
-5. Delete a module.
-6. Create a new task.
-7. Set a deadline and priority.
-8. Mark a task as completed.
-9. Use the Smart Guided Task Creator.
-10. View the dashboard.
-11. Generate a study schedule.
-
----
-
-# Screenshots
-Replace the placeholder links below with actual screenshots.
-
-## Login / Register
-![Login Screen](https://chatgpt.com/g/g-p-68b5a70645608191b8f8eba2aba6abd3/c/screenshots/login.png)
-
-## Dashboard
-![Dashboard Screen](https://chatgpt.com/g/g-p-68b5a70645608191b8f8eba2aba6abd3/c/screenshots/dashboard.png)
-
-## Module Management
-![Modules Screen](https://chatgpt.com/g/g-p-68b5a70645608191b8f8eba2aba6abd3/c/screenshots/modules.png)
-
-## Task Management
-![Tasks Screen](https://chatgpt.com/g/g-p-68b5a70645608191b8f8eba2aba6abd3/c/screenshots/tasks.png)
-
-## Study Schedule
-![Schedule Screen](https://chatgpt.com/g/g-p-68b5a70645608191b8f8eba2aba6abd3/c/screenshots/schedule.png)
-
----
-
-# Team Information
-ItemDetailsProject NameParanoidPlannerTeam NameYinyangProposed Level of AchievementApolloRepositoryParanoid-PlannerFrontendReact, Vite, Tailwind CSSBackendNode.js, Express.jsDatabasePostgreSQL, NeonDeploymentVercel, Render
+| Item | Details |
+|---|---|
+| Project Name | ParanoidPlanner |
+| Team Name | Yinyang |
+| Proposed Level | Apollo |
+| Frontend | React + Vite |
+| Backend | Node.js + Express |
+| Database | PostgreSQL (Neon) |
+| Deployment | Vercel + Render |
