@@ -145,6 +145,95 @@ const MetricCard = ({ label, value, helper }) => (
   </div>
 );
 
+const WorkloadIntelligence = ({ tasks, modules }) => {
+  const now = new Date();
+  const sevenDaysFromNow = new Date();
+  sevenDaysFromNow.setDate(now.getDate() + 7);
+
+  const pendingTasks = tasks.filter((task) => task.status !== 'completed');
+
+  const dueSoonTasks = pendingTasks.filter((task) => {
+    if (!task.deadline) return false;
+
+    const deadline = new Date(task.deadline);
+    return deadline >= now && deadline <= sevenDaysFromNow;
+  });
+
+  const highPriorityTasks = pendingTasks.filter(
+    (task) => Number(task.priority) >= 5
+  );
+
+  const moduleWorkload = modules.map((module) => {
+    const modulePendingTasks = pendingTasks.filter(
+      (task) => task.module_id === module.id
+    );
+
+    return {
+      ...module,
+      pendingCount: modulePendingTasks.length,
+    };
+  });
+
+  const mostDemandingModule = [...moduleWorkload].sort(
+    (a, b) => b.pendingCount - a.pendingCount
+  )[0];
+
+  let workloadHealth = 'Low';
+  let healthStyle = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+
+  if (dueSoonTasks.length >= 5 || highPriorityTasks.length >= 3) {
+    workloadHealth = 'High';
+    healthStyle = 'bg-red-50 text-red-700 border-red-200';
+  } else if (dueSoonTasks.length >= 2 || highPriorityTasks.length >= 1) {
+    workloadHealth = 'Moderate';
+    healthStyle = 'bg-amber-50 text-amber-700 border-amber-200';
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className={`rounded-2xl border p-4 ${healthStyle}`}>
+        <p className="text-sm font-semibold">Workload Health</p>
+        <p className="mt-1 text-2xl font-bold">{workloadHealth}</p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm text-slate-500">Due within 7 days</p>
+          <p className="mt-1 text-2xl font-bold text-slate-950">
+            {dueSoonTasks.length}
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm text-slate-500">High priority tasks</p>
+          <p className="mt-1 text-2xl font-bold text-slate-950">
+            {highPriorityTasks.length}
+          </p>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <p className="text-sm text-slate-500">Most demanding module</p>
+        <p className="mt-1 font-bold text-slate-950">
+          {mostDemandingModule?.pendingCount > 0
+            ? `${mostDemandingModule.module_code} — ${mostDemandingModule.pendingCount} pending`
+            : 'No module pressure yet'}
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <p className="text-sm text-slate-500">Recommended next focus</p>
+        <p className="mt-1 font-bold text-slate-950">
+          {dueSoonTasks[0]?.title ||
+            highPriorityTasks[0]?.title ||
+            pendingTasks[0]?.title ||
+            'No urgent task right now'}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 // Main focus card.
 // It uses the most urgent pending task calculated from real task data.
 const TodayFocus = ({ task, modules }) => {
@@ -452,6 +541,13 @@ export const Dashboard = () => {
           </div>
 
           <div className="space-y-6">
+            <Panel
+              title="Workload Intelligence"
+              subtitle="A quick risk check based on deadlines and priority."
+            >
+              <WorkloadIntelligence tasks={tasks} modules={modules} />
+            </Panel>
+            
             <Panel
               title="Quick Actions"
               subtitle="Common actions for planning your workload."
