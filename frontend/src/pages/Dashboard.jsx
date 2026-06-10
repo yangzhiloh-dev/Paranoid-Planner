@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { modulesAPI, tasksAPI, scheduleAPI } from '../api/api';
+import { FaTachometerAlt, FaTasks, FaCalendarAlt, FaBook } from 'react-icons/fa'; //icons for sidebar
 
 // Helper: match a task to its module.
 // This avoids repeating modules.find(...) throughout the dashboard.
@@ -66,61 +67,64 @@ const getPriorityLabel = (priority) => {
 // Sidebar navigation used only for the dashboard layout.
 const DashboardSidebar = ({ user }) => {
   const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navItems = [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Modules', path: '/modules' },
-    { label: 'Tasks', path: '/tasks' },
-    { label: 'Schedule', path: '/schedule' },
+    { label: 'Dashboard', path: '/dashboard', icon: FaTachometerAlt },
+    { label: 'Modules', path: '/modules', icon: FaBook },
+    { label: 'Tasks', path: '/tasks', icon: FaTasks },
+    { label: 'Schedule', path: '/schedule', icon: FaCalendarAlt },
   ];
 
   return (
-    <aside className="hidden min-h-screen w-72 shrink-0 bg-slate-950 p-5 text-white lg:block">
-      <div className="mb-8 rounded-2xl bg-white/5 p-4">
-        <p className="text-xs uppercase tracking-[0.25em] text-blue-300">
-          ParanoidPlanner
-        </p>
-        <h1 className="mt-2 text-xl font-bold">Workload Dashboard</h1>
+    <aside
+      className={`fixed top-0 left-0 min-h-screen bg-slate-950 text-white overflow-hidden transition-all duration-300 ease-in-out z-50 flex flex-col py-5 px-2`}
+      style={{ width: sidebarOpen ? '14rem' : '4rem' }}
+      onMouseEnter={() => setSidebarOpen(true)}
+      onMouseLeave={() => setSidebarOpen(false)}
+    >  
+     <div className="mb-6 h-9 flex items-center px-1">
+        <div className={`overflow-hidden transition-all duration-300 ${sidebarOpen ? 'opacity-100 max-w-xs' : 'opacity-0 max-w-0'}`}>
+          <p className="whitespace-nowrap text-xs font-semibold uppercase tracking-widest text-blue-400">
+            ParanoidPlanner
+          </p>
+        </div>
       </div>
 
-      <div className="mb-8 flex items-center gap-3 rounded-2xl bg-white/5 p-4">
-        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-500 font-bold">
+      <div className="mb-6 flex items-center gap-3 px-1">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500 text-xs font-bold">
           {user?.name?.charAt(0)?.toUpperCase() || 'S'}
         </div>
-
-        <div>
-          <p className="font-semibold">{user?.name || 'Student'}</p>
-          <p className="text-xs text-slate-400">Academic workspace</p>
+        <div className={`overflow-hidden transition-all duration-300 ${sidebarOpen ? 'opacity-100 max-w-xs' : 'opacity-0 max-w-0'}`}>
+          <p className="whitespace-nowrap text-sm font-semibold">{user?.name || 'Student'}</p>
+          <p className="whitespace-nowrap text-xs text-slate-400">Academic workspace</p>
         </div>
       </div>
 
-      <nav className="space-y-2">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
+      <div className="mb-4 h-px bg-white/10" />
 
+      <nav className="flex flex-col gap-1">
+        {navItems.map(({ label, path, icon: Icon }) => {
+          const isActive = location.pathname === path;
           return (
             <Link
-              key={item.path}
-              to={item.path}
-              className={`block rounded-xl px-4 py-3 text-sm font-medium transition ${
+              key={path}
+              to={path}
+              className={`flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm font-medium transition-all duration-150 border-l-2 ${
                 isActive
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                  ? 'bg-white/10 text-white border-blue-400'
+                  : 'text-slate-400 hover:bg-white/5 hover:text-white border-transparent'
               }`}
             >
-              {item.label}
+              <Icon size={16} className="shrink-0" />
+              <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${sidebarOpen ? 'opacity-100 max-w-xs' : 'opacity-0 max-w-0'}`}>
+                {label}
+              </span>
             </Link>
           );
         })}
       </nav>
 
-      <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-4">
-        <p className="text-sm font-semibold">MS2 Focus</p>
-        <p className="mt-1 text-xs leading-5 text-slate-400">
-          Scheduling engine, progress tracking, points system, and schedule
-          visualisation.
-        </p>
-      </div>
     </aside>
   );
 };
@@ -234,8 +238,8 @@ const WorkloadIntelligence = ({ tasks, modules }) => {
   );
 };
 
-// Main focus card.
-// It uses the most urgent pending task calculated from real task data.
+
+// Main focus card which uses the most urgent pending task calculated from real task data.
 const TodayFocus = ({ task, modules }) => {
   if (!task) {
     return (
@@ -418,6 +422,7 @@ const SchedulePreview = ({ schedule }) => {
 export const Dashboard = () => {
   const { user } = useAuth();
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [modules, setModules] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [schedule, setSchedule] = useState([]);
@@ -425,7 +430,6 @@ export const Dashboard = () => {
   const [error, setError] = useState('');
 
   // Fetch all dashboard data in parallel.
-  // This makes the dashboard faster than loading modules, tasks, and schedules one by one.
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -471,7 +475,7 @@ export const Dashboard = () => {
       <div className="flex min-h-screen bg-slate-100">
         <DashboardSidebar user={user} />
 
-        <main className="flex-1 px-6 py-8">
+        <main className="flex-1 px-6 py-8 ml-16">
           <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
             <p className="text-slate-600">Loading dashboard...</p>
           </div>
@@ -484,7 +488,7 @@ export const Dashboard = () => {
     <div className="flex min-h-screen bg-slate-100">
       <DashboardSidebar user={user} />
 
-      <main className="flex-1 px-6 py-8">
+      <main className="flex-1 px-6 py-8 ml-16">
         <header className="mb-6 flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">
