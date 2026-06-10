@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { modulesAPI, tasksAPI, scheduleAPI } from '../api/api';
-import { FaTachometerAlt, FaTasks, FaCalendarAlt, FaBook } from 'react-icons/fa'; //icons for sidebar
+import { FaTachometerAlt, FaTasks, FaCalendarAlt, FaBook } from 'react-icons/fa'; // icons for sidebar
+import Badge from '../components/ui/Badge';
+import ProgressBar from '../components/ui/ProgressBar';
+import EmptyState from '../components/ui/EmptyState';
+import IconWrap from '../components/ui/IconWrap';
 
 // Helper: match a task to its module.
 // This avoids repeating modules.find(...) throughout the dashboard.
@@ -78,11 +82,11 @@ const DashboardSidebar = ({ user }) => {
 
   return (
     <aside
-      className={`fixed top-0 left-0 min-h-screen bg-slate-950 text-white overflow-hidden transition-all duration-300 ease-in-out z-50 flex flex-col py-5 px-2`}
-      style={{ width: sidebarOpen ? '14rem' : '4rem' }}
+      className={`fixed top-0 left-0 min-h-screen bg-editorial-wood text-editorial-cream overflow-hidden transition-all duration-300 ease-in-out z-50 flex flex-col py-6 px-3 shadow-soft-2`}
+      style={{ width: sidebarOpen ? '14rem' : '4.5rem' }}
       onMouseEnter={() => setSidebarOpen(true)}
       onMouseLeave={() => setSidebarOpen(false)}
-    >  
+    >
      <div className="mb-6 h-9 flex items-center px-1">
         <div className={`overflow-hidden transition-all duration-300 ${sidebarOpen ? 'opacity-100 max-w-xs' : 'opacity-0 max-w-0'}`}>
           <p className="whitespace-nowrap text-xs font-semibold uppercase tracking-widest text-blue-400">
@@ -92,31 +96,33 @@ const DashboardSidebar = ({ user }) => {
       </div>
 
       <div className="mb-6 flex items-center gap-3 px-1">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500 text-xs font-bold">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-editorial-beige text-editorial-wood text-sm font-semibold">
           {user?.name?.charAt(0)?.toUpperCase() || 'S'}
         </div>
         <div className={`overflow-hidden transition-all duration-300 ${sidebarOpen ? 'opacity-100 max-w-xs' : 'opacity-0 max-w-0'}`}>
-          <p className="whitespace-nowrap text-sm font-semibold">{user?.name || 'Student'}</p>
-          <p className="whitespace-nowrap text-xs text-slate-400">Academic workspace</p>
+          <p className="whitespace-nowrap text-sm font-semibold text-editorial-cream">{user?.name || 'Student'}</p>
+          <p className="whitespace-nowrap text-xs text-editorial-beige/80">Academic workspace</p>
         </div>
       </div>
 
       <div className="mb-4 h-px bg-white/10" />
 
-      <nav className="flex flex-col gap-1">
+      <nav className="flex flex-col gap-2 mt-2">
         {navItems.map(({ label, path, icon: Icon }) => {
           const isActive = location.pathname === path;
           return (
             <Link
               key={path}
               to={path}
-              className={`flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm font-medium transition-all duration-150 border-l-2 ${
+              className={`flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm font-medium transition-all duration-150 ${
                 isActive
-                  ? 'bg-white/10 text-white border-blue-400'
-                  : 'text-slate-400 hover:bg-white/5 hover:text-white border-transparent'
+                  ? 'bg-editorial-beige/8 text-editorial-cream'
+                  : 'text-editorial-beige/90 hover:bg-editorial-beige/6'
               }`}
             >
-              <Icon size={16} className="shrink-0" />
+              <IconWrap>
+                <Icon size={16} />
+              </IconWrap>
               <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${sidebarOpen ? 'opacity-100 max-w-xs' : 'opacity-0 max-w-0'}`}>
                 {label}
               </span>
@@ -129,23 +135,36 @@ const DashboardSidebar = ({ user }) => {
   );
 };
 
-// Reusable section wrapper, keeps every dashboard block visually consistent
+// Reusable section wrapper with editorial styling.
+// Visual notes: remove heavy borders, use soft shadow, larger heading and
+// muted subtitle. Keeps consistent padding and rounded corners.
 const Panel = ({ title, subtitle, children }) => (
-  <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+  <section className="rounded-2xl bg-white p-6 shadow-soft-1">
     <div className="mb-5">
-      <h2 className="text-lg font-bold text-slate-950">{title}</h2>
-      {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
+      <h2 className="text-xl font-serifEditorial text-editorial-ink">{title}</h2>
+      {subtitle && <p className="mt-1 text-sm text-editorial-muted">{subtitle}</p>}
     </div>
 
     {children}
   </section>
 );
 
-const MetricCard = ({ label, value, helper }) => (
-  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-    <p className="text-sm font-medium text-slate-500">{label}</p>
-    <p className="mt-2 text-3xl font-bold text-slate-950">{value}</p>
-    {helper && <p className="mt-1 text-xs text-slate-500">{helper}</p>}
+// MetricCard: displays a numeric metric with optional helper text and a mini
+// progress bar. Designed to be subtle and editorial — soft background and
+// muted labels.
+const MetricCard = ({ label, value, helper, progress }) => (
+  <div className="rounded-2xl bg-white p-4 shadow-soft-1">
+    <p className="text-xs font-semibold text-editorial-muted uppercase tracking-wider">{label}</p>
+    <div className="mt-2 flex items-end justify-between gap-3">
+      <p className="text-2xl font-serifEditorial text-editorial-ink">{value}</p>
+      {helper && <Badge className="ml-auto" variant={progress ? 'muted' : 'high'}>{helper}</Badge>}
+    </div>
+
+    {typeof progress === 'number' && (
+      <div className="mt-3">
+        <ProgressBar value={progress} />
+      </div>
+    )}
   </div>
 );
 
@@ -243,18 +262,17 @@ const WorkloadIntelligence = ({ tasks, modules }) => {
 const TodayFocus = ({ task, modules }) => {
   if (!task) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6">
-        <p className="font-semibold text-slate-800">No pending tasks.</p>
-        <p className="mt-1 text-sm text-slate-500">
-          Create a task to start building your study plan.
-        </p>
+      <div className="rounded-2xl bg-white p-6 shadow-soft-1">
+        <EmptyState title="No pending tasks." subtitle="Create a task to start building your study plan." />
 
-        <Link
-          to="/tasks"
-          className="mt-4 inline-flex rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-        >
-          Create task
-        </Link>
+        <div className="mt-4">
+          <Link
+            to="/tasks"
+            className="inline-flex items-center gap-2 rounded-lg bg-editorial-terracotta px-4 py-2 text-sm font-semibold text-white hover:bg-editorial-terracotta/90 transition"
+          >
+            Create task
+          </Link>
+        </div>
       </div>
     );
   }
@@ -262,43 +280,30 @@ const TodayFocus = ({ task, modules }) => {
   const module = getModuleById(modules, task.module_id);
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
+    <div className="rounded-2xl bg-white p-6 shadow-soft-1">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-blue-600">
-            {module?.module_code || 'Module'}
-          </p>
+          <p className="text-sm font-medium text-editorial-muted">{module?.module_code || 'Module'}</p>
 
-          <h3 className="mt-2 text-2xl font-bold text-slate-950">
-            {task.title}
-          </h3>
+          <h3 className="mt-2 text-2xl font-serifEditorial text-editorial-ink">{task.title}</h3>
 
-          <p className="mt-2 text-sm text-slate-600">
-            Due {formatDate(task.deadline)} {formatTime(task.deadline)}
-          </p>
+          <p className="mt-2 text-sm text-editorial-muted">Due {formatDate(task.deadline)} {formatTime(task.deadline)}</p>
 
           {task.estimated_minutes && (
-            <p className="mt-1 text-sm text-slate-500">
-              Estimated duration: {task.estimated_minutes} mins
-            </p>
+            <p className="mt-1 text-sm text-editorial-muted">Estimated: {task.estimated_minutes} mins</p>
           )}
         </div>
 
-        <span
-          className={`rounded-full border px-3 py-1 text-sm font-semibold ${getPriorityStyle(
-            task.priority
-          )}`}
-        >
-          {getPriorityLabel(task.priority)}
-        </span>
-      </div>
+        <div className="flex flex-col items-end gap-3">
+          <Badge variant={Number(task.priority) >=5 ? 'high' : Number(task.priority) >=3 ? 'warn' : 'muted'}>
+            {getPriorityLabel(task.priority)}
+          </Badge>
 
-      <Link
-        to="/tasks"
-        className="mt-5 inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-      >
-        Open task board
-      </Link>
+          <Link to="/tasks" className="inline-flex rounded-md bg-editorial-wood px-3 py-1 text-xs font-semibold text-editorial-cream">
+            Open task board
+          </Link>
+        </div>
+      </div>
     </div>
   );
 };
@@ -485,7 +490,7 @@ export const Dashboard = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
+    <div className="flex min-h-screen bg-editorial-cream">
       <DashboardSidebar user={user} />
 
       <main className="flex-1 px-6 py-8 ml-16">
@@ -523,7 +528,6 @@ export const Dashboard = () => {
           <MetricCard
             label="Completion Rate"
             value={`${completionRate}%`}
-            helper="Calculated from your tasks"
           />
         </section>
 
