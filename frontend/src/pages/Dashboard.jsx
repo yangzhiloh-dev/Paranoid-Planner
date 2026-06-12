@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { modulesAPI, tasksAPI, scheduleAPI } from '../api/api';
-import {FaTachometerAlt,FaTasks,FaCalendarAlt,FaBook,FaMoon,FaCog,FaSearch,FaBell,FaSignOutAlt} from 'react-icons/fa'; // icons for sidebar
+import { FaTachometerAlt, FaTasks, FaCalendarAlt, FaBook, FaMoon, FaCog, FaSearch, FaBell, FaSignOutAlt } from 'react-icons/fa'; // icons for sidebar
 import Badge from '../components/ui/Badge';
 import ProgressBar from '../components/ui/ProgressBar';
 import EmptyState from '../components/ui/EmptyState';
