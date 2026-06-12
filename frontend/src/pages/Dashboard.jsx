@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { modulesAPI, tasksAPI, scheduleAPI } from '../api/api';
-import { FaTachometerAlt, FaTasks, FaCalendarAlt, FaBook } from 'react-icons/fa'; // icons for sidebar
+import {FaTachometerAlt,FaTasks,FaCalendarAlt,FaBook,FaMoon,FaCog,FaSearch,FaBell,FaSignOutAlt} from 'react-icons/fa'; // icons for sidebar
 import Badge from '../components/ui/Badge';
 import ProgressBar from '../components/ui/ProgressBar';
 import EmptyState from '../components/ui/EmptyState';
@@ -473,7 +473,7 @@ export const Dashboard = () => {
       <div className="flex min-h-screen bg-[#1a0f08]">
         <DashboardSidebar user={user} />
 
-        <main className="flex-1 px-6 py-8 ml-[88px]">
+        <main className="flex-1 px-6 py-8 ml-[88px] w-full">
           <div className="glass-panel p-8">
             <p className="text-slate-400">Loading dashboard...</p>
           </div>
@@ -486,7 +486,7 @@ export const Dashboard = () => {
     <div className="flex min-h-screen bg-[#1a0f08] text-white">
       <DashboardSidebar user={user} />
 
-      <main className="flex-1 px-6 py-8 ml-[88px] max-w-[1440px]">
+      <main className="flex-1 px-6 py-8 ml-[88px] w-full">
         <header className="mb-8 rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-glow backdrop-blur-2xl">
           <div className="grid gap-6 lg:grid-cols-[1.4fr_0.6fr] lg:items-center">
             <div className="space-y-4">
