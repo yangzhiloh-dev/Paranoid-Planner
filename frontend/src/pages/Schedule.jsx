@@ -42,36 +42,59 @@ export const Schedule = () => {
   };
 
   return (
-    <div>
+    <div className="min-h-screen bg-[#0B0B0D] text-slate-100 pb-24">
       <Navbar />
-      <div className="container mx-auto p-4">
-        <h1 className="text-3xl font-bold mb-4">Study Schedule</h1>
+      <div className="container mx-auto px-4 pt-28 pb-10 lg:pl-[18rem] lg:px-10 max-w-6xl">
+        <header className="mb-8 rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-glow backdrop-blur-2xl">
+          <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Study Schedule</p>
+          <h1 className="mt-3 text-4xl font-semibold text-white">Stay on pace with every session.</h1>
+          <p className="mt-2 text-sm text-slate-400">
+            Generate study sessions from your module deadlines and keep your rhythm on track.
+          </p>
+        </header>
 
-        {error && <p className="text-red-500 mb-4">{error}</p>}
+        {error && (
+          <div className="mb-6 rounded-[28px] border border-red-400/20 bg-[#581c1c]/15 p-4 text-red-200">
+            {error}
+          </div>
+        )}
 
         <PrimaryButton
           type="button"
           onClick={handleGenerateSchedule}
           loading={generating}
           disabled={generating}
-          className="w-auto px-4 py-2 rounded mb-4"
+          className="mb-6 w-full sm:w-auto rounded-full px-6 py-3 font-semibold"
         >
           {generating ? 'Generating...' : 'Generate Schedule'}
         </PrimaryButton>
 
         {loading ? (
-          <p>Loading schedule...</p>
+          <div className="rounded-[28px] border border-white/10 bg-white/5 p-8 text-center text-slate-300 shadow-glow">
+            Loading schedule...
+          </div>
         ) : schedule.length === 0 ? (
-          <p className="text-gray-600">No schedule generated yet. Click "Generate Schedule" to create one.</p>
+          <div className="rounded-[28px] border border-white/10 bg-white/5 p-8 text-slate-300 shadow-glow">
+            No schedule generated yet. Click "Generate Schedule" to create one.
+          </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid gap-6">
             {schedule.map((session, index) => (
-              <div key={index} className="bg-white p-4 rounded shadow">
-                <h2 className="text-xl font-bold">{session.title || session.task_title}</h2>
-                <p className="text-gray-600">Module: {session.module_code} - {session.module_name}</p>
-                <p className="text-gray-600">Start: {new Date(session.scheduled_start).toLocaleString()}</p>
-                <p className="text-gray-600">End: {new Date(session.scheduled_end).toLocaleString()}</p>
-                <p className="text-gray-600">Status: {session.status}</p>
+              <div key={index} className="glass-card p-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold text-white">{session.title || session.task_title}</h2>
+                    <p className="mt-1 text-sm text-slate-400">Module: {session.module_code} - {session.module_name}</p>
+                  </div>
+                  <span className="rounded-full bg-slate-900/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-slate-200">
+                    {session.status}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 text-slate-300">
+                  <p>Start: {new Date(session.scheduled_start).toLocaleString()}</p>
+                  <p>End: {new Date(session.scheduled_end).toLocaleString()}</p>
+                </div>
               </div>
             ))}
           </div>

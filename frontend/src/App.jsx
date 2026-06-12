@@ -13,11 +13,9 @@ import './index.css';
 
 function App() {
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={<Navigate to="/dashboard" replace />}
-      />
+    <div className="min-h-screen bg-slate-950 text-[#F5F2EA]">
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
       <Route
         path="/dashboard"
@@ -58,11 +56,9 @@ function App() {
         }
       />
 
-      <Route
-        path="*"
-        element={<Navigate to="/dashboard" replace />}
-      />
-    </Routes>
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </div>
   );
 }
 
