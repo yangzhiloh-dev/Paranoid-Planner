@@ -188,13 +188,13 @@ export const Tasks = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#0B0B0D] text-slate-100 pb-24">
+        <div className="min-h-screen bg-[#1a0f08] text-slate-100 pb-24">
             <Navbar />
-            <div className="container mx-auto px-4 pt-28 pb-10 lg:pl-[18rem] lg:px-10 max-w-7xl">
+            <div className="container mx-auto px-4 pt-28 pb-10 lg:pl-[88px] lg:px-10 max-w-7xl">
                 <header className="mb-8 rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-glow backdrop-blur-2xl">
                     <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
                         <div className="space-y-3">
-                            <p className="text-xs uppercase tracking-[0.32em] text-slate-500">Task Management</p>
+                            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Task Management</p>
                             <h1 className="text-4xl font-semibold text-white">Build a productive task workflow.</h1>
                             <p className="max-w-2xl text-sm text-slate-400">
                                 Organize, prioritize, and track your work in a premium dark workspace.

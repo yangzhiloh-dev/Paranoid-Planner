@@ -49,16 +49,9 @@ const sortByDeadlineAndPriority = (taskList) =>
 
 const getPriorityStyle = (priority) => {
   const value = Number(priority);
-
-  if (value >= 5) {
-    return 'bg-red-50 text-red-700 border-red-200';
-  }
-
-  if (value >= 3) {
-    return 'bg-amber-50 text-amber-700 border-amber-200';
-  }
-
-  return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  if (value >= 5) return 'bg-red-900/30 text-red-300 border-red-500/20';
+  if (value >= 3) return 'bg-amber-900/25 text-amber-300 border-amber-500/20';
+  return 'bg-slate-700/40 text-slate-300 border-slate-500/20';
 };
 
 const getPriorityLabel = (priority) => {
@@ -69,71 +62,76 @@ const getPriorityLabel = (priority) => {
   return 'Low';
 };
 
+const TopBar = ({ user }) => (
+  <div className="mb-6 flex items-center gap-4 rounded-[20px] border border-white/8 bg-white/4 px-5 py-3 backdrop-blur-xl">
+    {/* Left icons */}
+    <div className="flex items-center gap-3 text-slate-400">
+      <FaMoon size={16} />
+      <FaCog size={16} />
+    </div>
+
+    {/* Search bar */}
+    <div className="flex flex-1 items-center gap-3 rounded-full border border-white/8 bg-white/5 px-4 py-2 text-sm text-slate-500">
+      <FaSearch size={13} />
+      <span>Enter your search request</span>
+    </div>
+
+    {/* Right side */}
+    <div className="flex items-center gap-3">
+      <button className="flex h-9 w-9 items-center justify-center rounded-full bg-white/8 text-slate-300">
+        <FaBell size={15} />
+      </button>
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/30 text-amber-200 text-sm font-semibold">
+        {user?.name?.charAt(0)?.toUpperCase() || 'S'}
+      </div>
+    </div>
+  </div>
+);
+
 // Sidebar navigation used only for the dashboard layout.
 const DashboardSidebar = ({ user }) => {
   const location = useLocation();
-
   const navItems = [
-    { label: 'Dashboard', path: '/dashboard', icon: FaTachometerAlt },
-    { label: 'Modules', path: '/modules', icon: FaBook },
-    { label: 'Tasks', path: '/tasks', icon: FaTasks },
-    { label: 'Schedule', path: '/schedule', icon: FaCalendarAlt },
+    { path: '/dashboard', icon: FaTachometerAlt },
+    { path: '/modules', icon: FaBook },
+    { path: '/tasks', icon: FaTasks },
+    { path: '/schedule', icon: FaCalendarAlt },
   ];
 
   return (
-    <aside className="fixed top-0 left-6 z-40 h-full w-[18rem] flex-col rounded-[32px] border border-white/10 bg-white/5 p-6 text-slate-100 shadow-glow backdrop-blur-2xl">
-      <div className="flex h-full flex-col gap-8">
-        <div>
-          <Link to="/dashboard" className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-amber-300/15 text-amber-300 shadow-[0_18px_45px_rgba(245,158,11,0.18)]">
-              <span className="text-lg font-semibold">P</span>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-slate-400">Paranoid</p>
-              <p className="text-xl font-semibold text-white">Planner</p>
-            </div>
-          </Link>
+    <aside className="fixed top-4 left-4 z-40 h-[calc(100vh-2rem)] w-[72px] flex flex-col items-center py-5 rounded-[24px] border border-white/8 bg-white/4 backdrop-blur-2xl shadow-panel">
+      {/* Logo mark */}
+      <Link to="/dashboard" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-400/20 text-amber-300 mb-8">
+        <span className="text-base font-bold">P</span>
+      </Link>
 
-          <div className="mt-8 rounded-[28px] border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Workspace</p>
-            <div className="mt-4 flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-3xl bg-slate-900 text-slate-100 text-sm font-semibold">
-                {user?.name?.charAt(0)?.toUpperCase() || 'S'}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-white">{user?.name || 'Student'}</p>
-                <p className="truncate text-xs text-slate-400">Focus-driven planning</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <nav className="flex flex-col gap-2">
-          {navItems.map(({ label, path, icon: Icon }) => {
-            const isActive = location.pathname === path;
-            return (
-              <Link
-                key={path}
-                to={path}
-                className={`group flex items-center gap-4 rounded-3xl px-4 py-3 text-sm font-semibold transition ${
-                  isActive
-                    ? 'bg-amber-300/18 text-white shadow-[0_16px_40px_rgba(245,158,11,0.16)]'
-                    : 'text-slate-300 hover:bg-white/10 hover:text-white'
+      {/* Nav icons */}
+      <nav className="flex flex-col gap-3 flex-1">
+        {navItems.map(({ path, icon: Icon }) => {
+          const isActive = location.pathname === path;
+          return (
+            <Link
+              key={path}
+              to={path}
+              className={`flex h-10 w-10 items-center justify-center rounded-xl transition ${isActive
+                ? 'bg-orange-500/80 text-white shadow-[0_8px_24px_rgba(200,80,20,0.35)]'
+                : 'text-slate-400 hover:bg-white/8 hover:text-white'
                 }`}
-              >
-                <IconWrap className={isActive ? 'bg-amber-300 text-slate-950' : 'bg-white/10 text-slate-300'}>
-                  <Icon size={18} />
-                </IconWrap>
-                <span>{label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+            >
+              <Icon size={18} />
+            </Link>
+          );
+        })}
+      </nav>
 
-        <div className="mt-auto rounded-[28px] border border-white/10 bg-white/5 p-4">
-          <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Signed in as</p>
-          <p className="mt-3 text-sm font-semibold text-white">{user?.email || 'No email'}</p>
-        </div>
+      {/* Bottom icons */}
+      <div className="flex flex-col gap-3">
+        <button className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-white/8 hover:text-white transition">
+          <FaCog size={16} />
+        </button>
+        <button className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-white/8 hover:text-white transition">
+          <FaSignOutAlt size={16} />
+        </button>
       </div>
     </aside>
   );
@@ -205,14 +203,14 @@ const WorkloadIntelligence = ({ tasks, modules }) => {
   )[0];
 
   let workloadHealth = 'Low';
-  let healthStyle = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  let healthStyle = 'bg-emerald-900/25 text-emerald-300 border-emerald-500/20';
 
   if (dueSoonTasks.length >= 5 || highPriorityTasks.length >= 3) {
     workloadHealth = 'High';
-    healthStyle = 'bg-red-50 text-red-700 border-red-200';
+    healthStyle = 'bg-red-900/30 text-red-300 border-red-500/20';
   } else if (dueSoonTasks.length >= 2 || highPriorityTasks.length >= 1) {
     workloadHealth = 'Moderate';
-    healthStyle = 'bg-amber-50 text-amber-700 border-amber-200';
+    healthStyle = 'bg-amber-900/25 text-amber-300 border-amber-500/20';
   }
 
   return (
@@ -223,33 +221,33 @@ const WorkloadIntelligence = ({ tasks, modules }) => {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm text-slate-500">Due within 7 days</p>
-          <p className="mt-1 text-2xl font-bold text-slate-950">
+        <div className="rounded-2xl border border-white/8 bg-white/5 p-4">
+          <p className="text-sm text-slate-400">Due within 7 days</p>
+          <p className="mt-1 text-2xl font-bold text-white">
             {dueSoonTasks.length}
           </p>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm text-slate-500">High priority tasks</p>
-          <p className="mt-1 text-2xl font-bold text-slate-950">
+        <div className="rounded-2xl border border-white/8 bg-white/5 p-4">
+          <p className="text-sm text-slate-400">High priority tasks</p>
+          <p className="mt-1 text-2xl font-bold text-white">
             {highPriorityTasks.length}
           </p>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <p className="text-sm text-slate-500">Most demanding module</p>
-        <p className="mt-1 font-bold text-slate-950">
+      <div className="rounded-2xl border border-white/8 bg-white/5 p-4">
+        <p className="text-sm text-slate-400">Most demanding module</p>
+        <p className="mt-1 font-bold text-white">
           {mostDemandingModule?.pendingCount > 0
             ? `${mostDemandingModule.module_code} — ${mostDemandingModule.pendingCount} pending`
             : 'No module pressure yet'}
         </p>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <p className="text-sm text-slate-500">Recommended next focus</p>
-        <p className="mt-1 font-bold text-slate-950">
+      <div className="rounded-2xl border border-white/8 bg-white/5 p-4">
+        <p className="text-sm text-slate-400">Recommended next focus</p>
+        <p className="mt-1 font-bold text-white">
           {dueSoonTasks[0]?.title ||
             highPriorityTasks[0]?.title ||
             pendingTasks[0]?.title ||
@@ -472,10 +470,10 @@ export const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-[#0B0B0D]">
+      <div className="flex min-h-screen bg-[#1a0f08]">
         <DashboardSidebar user={user} />
 
-        <main className="flex-1 px-6 py-8 ml-[18rem]">
+        <main className="flex-1 px-6 py-8 ml-[88px]">
           <div className="glass-panel p-8">
             <p className="text-slate-400">Loading dashboard...</p>
           </div>
@@ -485,14 +483,14 @@ export const Dashboard = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0B0B0D] text-white">
+    <div className="flex min-h-screen bg-[#1a0f08] text-white">
       <DashboardSidebar user={user} />
 
-      <main className="flex-1 px-6 py-8 ml-[18rem] max-w-[1440px]">
+      <main className="flex-1 px-6 py-8 ml-[88px] max-w-[1440px]">
         <header className="mb-8 rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-glow backdrop-blur-2xl">
           <div className="grid gap-6 lg:grid-cols-[1.4fr_0.6fr] lg:items-center">
             <div className="space-y-4">
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Good afternoon, {user?.name?.split(' ')[0] || 'Student'}</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Good afternoon, {user?.name?.split(' ')[0] || 'Student'}</p>
               <h1 className="text-4xl font-semibold tracking-tight text-white">A calmer, clearer study flow.</h1>
               <p className="max-w-2xl text-sm text-slate-400">
                 See what matters today and keep your modules, tasks, and schedule aligned with your goals.

@@ -5,10 +5,10 @@
 @layer base {
   :root {
     color-scheme: dark;
-    --bg: #0b0b0d;
-    --surface: rgba(255,255,255,0.05);
-    --surface-strong: rgba(255,255,255,0.08);
-    --border: rgba(255,255,255,0.10);
+    --bg: #1a0f08;
+    --surface: rgba(255, 255, 255, 0.04);
+    --surface-strong: rgba(255, 255, 255, 0.06);
+    --border: rgba(255, 255, 255, 0.08);
     --text-primary: #f5f2ea;
     --text-muted: #a8a29e;
     --accent: #f59e0b;
@@ -27,16 +27,16 @@
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: var(--bg);
+    background-color: #1a0f08;
     color: var(--text-primary);
     background-image:
-      radial-gradient(circle at top left, rgba(245,158,11,0.12), transparent 20%),
-      radial-gradient(circle at 80% 10%, rgba(255,255,255,0.05), transparent 18%),
-      radial-gradient(circle at bottom right, rgba(255,255,255,0.04), transparent 12%);
+      radial-gradient(ellipse at 75% 0%, rgba(210, 80, 20, 0.55) 0%, rgba(160, 45, 10, 0.3) 35%, transparent 65%),
+      radial-gradient(ellipse at 100% 50%, rgba(180, 60, 10, 0.2), transparent 40%),
+      radial-gradient(ellipse at 0% 100%, rgba(40, 20, 5, 0.4), transparent 50%);
   }
 
   body::selection {
-    background: rgba(245,158,11,0.24);
+    background: rgba(245, 158, 11, 0.24);
     color: var(--text-primary);
   }
 
@@ -58,12 +58,17 @@
 
 @layer utilities {
   .glass-card {
-    @apply rounded-[28px] border border-white/10 bg-white/5 backdrop-blur-xl shadow-glow;
+    @apply rounded-[20px] backdrop-blur-xl;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: rgba(255, 200, 100, 0.04);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.32);
   }
 
   .glass-panel {
-    @apply rounded-[32px] border border-white/10 backdrop-blur-2xl shadow-glow;
-    background-color: rgba(255,255,255,0.06);
+    @apply rounded-[24px] backdrop-blur-2xl;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: rgba(255, 180, 80, 0.04);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
   }
 
   .glass-input {

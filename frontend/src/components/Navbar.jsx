@@ -61,11 +61,10 @@ export const Navbar = () => {
                 <Link
                   key={path}
                   to={path}
-                  className={`group flex items-center gap-4 rounded-3xl px-4 py-3 text-sm font-semibold transition ${
-                    isActive
-                      ? 'bg-amber-300/18 text-white shadow-[0_16px_40px_rgba(245,158,11,0.16)]'
-                      : 'text-slate-300 hover:bg-white/10 hover:text-white'
-                  }`}
+                  className={`group flex items-center gap-4 rounded-3xl px-4 py-3 text-sm font-semibold transition ${isActive
+                    ? 'bg-amber-300/18 text-white shadow-[0_16px_40px_rgba(245,158,11,0.16)]'
+                    : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                    }`}
                 >
                   <IconWrap className={isActive ? 'bg-amber-300 text-slate-950' : 'bg-white/10 text-slate-300'}>
                     <Icon size={18} />
@@ -88,7 +87,7 @@ export const Navbar = () => {
         </div>
       </aside>
 
-      <div className="lg:hidden fixed inset-x-0 top-0 z-40 border-b border-white/10 bg-[#0B0B0D]/95 backdrop-blur-2xl">
+      <div className="lg:hidden fixed inset-x-0 top-0 z-40 border-b border-white/10 bg-[#1a0f08]/95 backdrop-blur-2xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           <Link to="/dashboard" className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-300/15 text-amber-300">
@@ -109,7 +108,7 @@ export const Navbar = () => {
         </div>
       </div>
 
-      <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#0B0B0D]/95 backdrop-blur-2xl">
+      <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#1a0f08]/95 backdrop-blur-2xl">
         <div className="mx-auto flex max-w-7xl justify-between px-4 py-2">
           {navLinks.map(({ label, path, icon: Icon }) => {
             const isActive = location.pathname === path;
@@ -117,9 +116,8 @@ export const Navbar = () => {
               <Link
                 key={path}
                 to={path}
-                className={`inline-flex flex-1 flex-col items-center gap-1 rounded-3xl px-3 py-2 text-[11px] font-semibold transition ${
-                  isActive ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'
-                }`}
+                className={`inline-flex flex-1 flex-col items-center gap-1 rounded-3xl px-3 py-2 text-[11px] font-semibold transition ${isActive ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
               >
                 <IconWrap className={isActive ? 'bg-amber-300 text-slate-950' : 'bg-white/10 text-slate-400'}>
                   <Icon size={16} />

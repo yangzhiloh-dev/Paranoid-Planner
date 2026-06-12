@@ -24,14 +24,14 @@ const TaskCard = ({ task, modules, onStatusChange, onEdit, onDelete }) => {
                 </div>
 
                 <span className={`rounded-full px-3 py-1 text-xs font-semibold ${task.priority === 5
-                        ? 'bg-red-500/15 text-red-200 border border-red-400/20'
-                        : task.priority === 4
-                            ? 'bg-amber-500/15 text-amber-200 border border-amber-400/20'
-                            : task.priority === 3
-                                ? 'bg-slate-700/70 text-slate-100 border border-slate-600/40'
-                                : task.priority === 2
-                                    ? 'bg-blue-500/15 text-blue-200 border border-blue-400/20'
-                                    : 'bg-slate-700/70 text-slate-100 border border-slate-600/40'
+                    ? 'bg-red-500/15 text-red-200 border border-red-400/20'
+                    : task.priority === 4
+                        ? 'bg-amber-500/15 text-amber-200 border border-amber-400/20'
+                        : task.priority === 3
+                            ? 'bg-slate-700/70 text-slate-100 border border-slate-600/40'
+                            : task.priority === 2
+                                ? 'bg-blue-500/15 text-blue-200 border border-blue-400/20'
+                                : 'bg-slate-700/70 text-slate-100 border border-slate-600/40'
                     }`}>
                     {getPriorityLabel(task.priority)}
                 </span>
