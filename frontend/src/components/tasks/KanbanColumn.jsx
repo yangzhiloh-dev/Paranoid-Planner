@@ -2,29 +2,29 @@ import TaskCard from './TaskCard';
 import { BOARD_STYLES, HEADER_STYLES } from './taskConstants';
 
 const KanbanColumn = ({ column, tasks, modules, onStatusChange, onEdit, onDelete }) => {
+    const statusEmoji = column.status === 'pending' ? '🎯' : column.status === 'in_progress' ? '🚀' : '🎉';
+
     return (
-        <div className={`rounded-2xl border-2 ${BOARD_STYLES[column.color]} overflow-hidden shadow-sm`}>
-            <div className={`bg-gradient-to-r ${HEADER_STYLES[column.color]} px-6 py-4`}>
-                <div className="flex items-center gap-2">
+        <div className="rounded-[32px] border border-white/10 bg-white/5 shadow-glow backdrop-blur-xl overflow-hidden">
+            <div className={`bg-slate-950/90 border-b border-white/10 px-5 py-5`}>
+                <div className="flex items-center gap-3">
                     <span className="text-2xl">{column.icon}</span>
                     <div>
-                        <h2 className="text-lg font-bold text-white">{column.title}</h2>
-                        <p className="text-sm text-white/80">
+                        <h2 className="text-lg font-semibold text-white">{column.title}</h2>
+                        <p className="text-sm text-slate-400">
                             {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
                         </p>
                     </div>
                 </div>
             </div>
-            <div className="p-4">
+            <div className="p-5">
                 {tasks.length === 0 ? (
-                    <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-white p-8 text-center">
-                        <div className="text-4xl mb-2">
-                            {column.status === 'pending' ? '🎯' : column.status === 'in_progress' ? '🚀' : '🎉'}
-                        </div>
-                        <p className="text-sm text-slate-500">{column.emptyText}</p>
+                    <div className="glass-card border-dashed border-white/10 p-8 text-center">
+                        <div className="text-4xl mb-3">{statusEmoji}</div>
+                        <p className="text-sm text-slate-400">{column.emptyText}</p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         {tasks.map((task) => (
                             <TaskCard
                                 key={task.id}

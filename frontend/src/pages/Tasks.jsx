@@ -188,16 +188,49 @@ export const Tasks = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
+        <div className="min-h-screen bg-[#1a0f08] text-slate-100 pb-24">
             <Navbar />
-            <div className="container mx-auto px-4 py-8">
-                <header className="mb-8 space-y-2">
-                    <h1 className="text-4xl font-black bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent">Task Management</h1>
-                    <p className="text-slate-600">Organize, prioritize, and track your work efficiently.</p>
+            <div className="w-full px-4 pt-28 pb-10 lg:pl-[88px] lg:px-10">
+                <header className="mb-8 rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-glow backdrop-blur-2xl">
+                    <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                        <div className="space-y-3">
+                            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Task Management</p>
+                            <h1 className="text-4xl font-semibold text-white">Build a productive task workflow.</h1>
+                            <p className="max-w-2xl text-sm text-slate-400">
+                                Organize, prioritize, and track your work in a premium dark workspace.
+                            </p>
+                        </div>
+
+                        <div className="grid gap-3 sm:flex sm:items-center">
+                            <PrimaryButton
+                                type="button"
+                                onClick={() => {
+                                    setShowCreateForm((s) => !s);
+                                    setEditingTask(null);
+                                    resetTaskForm();
+                                }}
+                                className="w-full sm:w-auto rounded-full px-6 py-3 font-semibold"
+                            >
+                                {showCreateForm ? 'Cancel' : '+ Create Task'}
+                            </PrimaryButton>
+                            <PrimaryButton
+                                type="button"
+                                variant="glass"
+                                onClick={() => setShowBulkImportModal(true)}
+                                className="w-full sm:w-auto rounded-full px-6 py-3 font-semibold"
+                            >
+                                📥 Bulk Import
+                            </PrimaryButton>
+                        </div>
+                    </div>
                 </header>
 
                 <Toast message={showToast ? toastMessage : ''} />
-                {error && <p className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700">{error}</p>}
+                {error && (
+                    <div className="mb-6 rounded-[28px] border border-red-400/20 bg-[#581c1c]/15 p-4 text-red-200">
+                        {error}
+                    </div>
+                )}
 
                 <GuidedTaskCreator
                     modules={modules}
@@ -211,10 +244,23 @@ export const Tasks = () => {
                 />
 
                 <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <PrimaryButton type="button" onClick={() => { setShowCreateForm((s) => !s); setEditingTask(null); resetTaskForm(); }} className="w-auto rounded-xl px-6 py-3 font-semibold">
+                    <PrimaryButton
+                        type="button"
+                        onClick={() => {
+                            setShowCreateForm((s) => !s);
+                            setEditingTask(null);
+                            resetTaskForm();
+                        }}
+                        className="w-full sm:w-auto rounded-full px-6 py-3 font-semibold"
+                    >
                         {showCreateForm ? 'Cancel' : '+ Create Task'}
                     </PrimaryButton>
-                    <PrimaryButton type="button" onClick={() => setShowBulkImportModal(true)} className="w-auto rounded-xl px-6 py-3 font-semibold">
+                    <PrimaryButton
+                        type="button"
+                        variant="glass"
+                        onClick={() => setShowBulkImportModal(true)}
+                        className="w-full sm:w-auto rounded-full px-6 py-3 font-semibold"
+                    >
                         📥 Bulk Import
                     </PrimaryButton>
                 </div>
@@ -226,11 +272,11 @@ export const Tasks = () => {
                 {loading ? (
                     <div className="flex items-center justify-center py-12">
                         <div className="space-y-4 text-center">
-                            <svg className="animate-spin h-10 w-10 text-slate-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin h-10 w-10 text-amber-300 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                             </svg>
-                            <p className="text-slate-600 font-medium">Loading tasks...</p>
+                            <p className="text-slate-300 font-medium">Loading tasks...</p>
                         </div>
                     </div>
                 ) : (

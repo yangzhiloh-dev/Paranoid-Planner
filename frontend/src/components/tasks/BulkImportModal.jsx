@@ -1,15 +1,15 @@
 const BulkImportModal = ({ bulkImportText, setBulkImportText, onClose, onSubmit, feedback }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div className="w-full max-w-2xl rounded-3xl bg-white p-8 shadow-2xl">
-            <div className="mb-6 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="w-full max-w-2xl rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-glow backdrop-blur-2xl text-slate-100">
+            <div className="mb-6 flex items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-slate-900"> Bulk Import Tasks</h2>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <h2 className="text-2xl font-semibold text-white">Bulk Import Tasks</h2>
+                    <p className="mt-1 text-sm text-slate-400">
                         Paste one task per line. If module code is present it will be used, otherwise first module is fallback.
                     </p>
                 </div>
 
-                <button type="button" onClick={onClose} className="text-slate-400 text-xl">
+                <button type="button" onClick={onClose} className="rounded-full bg-white/10 px-3 py-2 text-xl text-slate-100 transition hover:bg-white/15">
                     ✕
                 </button>
             </div>
@@ -20,11 +20,11 @@ const BulkImportModal = ({ bulkImportText, setBulkImportText, onClose, onSubmit,
                     value={bulkImportText}
                     onChange={(e) => setBulkImportText(e.target.value)}
                     placeholder="CS2030 Assignment 1 - Friday\nST2334 Quiz - Sunday"
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                    className="glass-input w-full min-h-[220px]"
                 />
 
                 {feedback && (
-                    <p className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700 border border-slate-200">
+                    <p className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-200">
                         {feedback}
                     </p>
                 )}
@@ -33,11 +33,11 @@ const BulkImportModal = ({ bulkImportText, setBulkImportText, onClose, onSubmit,
                     <button
                         type="button"
                         onClick={onClose}
-                        className="rounded-xl border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700"
+                        className="rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
                     >
                         Cancel
                     </button>
-                    <button type="submit" className="rounded-xl bg-slate-900 px-6 py-3 font-semibold text-white">
+                    <button type="submit" className="rounded-full bg-amber-300 px-6 py-3 text-sm font-semibold text-slate-950 shadow-md transition hover:bg-amber-400">
                         Import Tasks
                     </button>
                 </div>

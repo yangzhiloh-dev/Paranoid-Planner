@@ -17,14 +17,14 @@ const GuidedTaskCreator = ({
     return (
         <form
             onSubmit={onCreateTask}
-            className="mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-8 shadow-2xl text-slate-100"
+            className="mb-8 overflow-hidden rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-glow backdrop-blur-2xl text-slate-100"
         >
             <div className="mb-6 space-y-2">
                 <div className="flex items-center gap-2">
                     <span className="text-2xl">🎯</span>
-                    <label className="text-lg font-bold text-white">Smart Guided Task Creator</label>
+                    <label className="text-lg font-semibold text-white">Smart Guided Task Creator</label>
                 </div>
-                <p className="max-w-2xl text-slate-300">
+                <p className="max-w-2xl text-slate-400">
                     Build a task quickly using module, task type, urgency, deadline, and optional duration.
                 </p>
             </div>
@@ -33,14 +33,8 @@ const GuidedTaskCreator = ({
                 <PrimaryButton
                     type="button"
                     onClick={() => setShowGuidedForm(true)}
-                    className="w-auto rounded-2xl px-8 py-4 font-bold"
-                    style={{
-                        backgroundColor: 'rgba(255,255,255,0.08)',
-                        backdropFilter: 'blur(6px)',
-                        WebkitBackdropFilter: 'blur(6px)',
-                        border: '1px solid rgba(255,255,255,0.14)',
-                        color: '#ffffff'
-                    }}
+                    className="w-auto rounded-full px-8 py-4 font-bold"
+                    variant="glass"
                 >
                     + Create with Guided Form
                 </PrimaryButton>
@@ -49,11 +43,11 @@ const GuidedTaskCreator = ({
                     <div className="space-y-4">
                         <div className="grid gap-4 sm:grid-cols-2">
                             <div>
-                                <label className="block text-sm font-semibold text-slate-200 mb-2">Module *</label>
+                                <label className="block text-sm font-semibold text-slate-300 mb-2">Module *</label>
                                 <select
                                     value={guidedTaskForm.module_id}
                                     onChange={(e) => setGuidedTaskForm((s) => ({ ...s, module_id: e.target.value }))}
-                                    className="w-full rounded-xl border-0 bg-slate-100 px-4 py-2 text-slate-900 shadow-sm"
+                                    className="glass-input w-full"
                                 >
                                     <option value="">Select Module</option>
                                     {modules.map((module) => (
@@ -64,11 +58,11 @@ const GuidedTaskCreator = ({
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold text-slate-200 mb-2">Task Type</label>
+                                <label className="block text-sm font-semibold text-slate-300 mb-2">Task Type</label>
                                 <select
                                     value={guidedTaskForm.taskType}
                                     onChange={(e) => setGuidedTaskForm((s) => ({ ...s, taskType: e.target.value }))}
-                                    className="w-full rounded-xl border-0 bg-slate-100 px-4 py-2 text-slate-900 shadow-sm"
+                                    className="glass-input w-full"
                                 >
                                     {TASK_TYPES.map((type) => (
                                         <option key={type}>{type}</option>
@@ -76,11 +70,11 @@ const GuidedTaskCreator = ({
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold text-slate-200 mb-2">Urgency *</label>
+                                <label className="block text-sm font-semibold text-slate-300 mb-2">Urgency *</label>
                                 <select
                                     value={guidedTaskForm.urgency}
                                     onChange={(e) => setGuidedTaskForm((s) => ({ ...s, urgency: e.target.value }))}
-                                    className="w-full rounded-xl border-0 bg-slate-100 px-4 py-2 text-slate-900 shadow-sm"
+                                    className="glass-input w-full"
                                 >
                                     {Object.keys(URGENCY_PRIORITY).map((option) => (
                                         <option key={option}>{option}</option>
@@ -88,12 +82,12 @@ const GuidedTaskCreator = ({
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold text-slate-200 mb-2">Deadline *</label>
+                                <label className="block text-sm font-semibold text-slate-300 mb-2">Deadline *</label>
                                 <input
                                     type="datetime-local"
                                     value={guidedTaskForm.deadline}
                                     onChange={(e) => setGuidedTaskForm((s) => ({ ...s, deadline: e.target.value }))}
-                                    className="w-full rounded-xl border-0 bg-slate-100 px-4 py-2 text-slate-900 shadow-sm"
+                                    className="glass-input w-full"
                                     required
                                 />
                             </div>
@@ -101,7 +95,7 @@ const GuidedTaskCreator = ({
 
                         <div className="grid gap-4 sm:grid-cols-2">
                             <div>
-                                <label className="block text-sm font-semibold text-slate-200 mb-2">Estimated Duration (mins)</label>
+                                <label className="block text-sm font-semibold text-slate-300 mb-2">Estimated Duration (mins)</label>
                                 <input
                                     type="number"
                                     min="1"
@@ -109,56 +103,56 @@ const GuidedTaskCreator = ({
                                     value={guidedTaskForm.estimated_minutes}
                                     onChange={(e) => setGuidedTaskForm((s) => ({ ...s, estimated_minutes: e.target.value }))}
                                     placeholder="Optional"
-                                    className="w-full rounded-xl border-0 bg-slate-100 px-4 py-2 text-slate-900 shadow-sm"
+                                    className="glass-input w-full"
                                 />
-                                {guidedDurationError && <p className="mt-1 text-xs text-rose-200">{guidedDurationError}</p>}
+                                {guidedDurationError && <p className="mt-1 text-xs text-rose-300">{guidedDurationError}</p>}
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold text-slate-200 mb-2">Task Title (Optional)</label>
+                                <label className="block text-sm font-semibold text-slate-300 mb-2">Task Title (Optional)</label>
                                 <input
                                     type="text"
                                     value={guidedTaskForm.title}
                                     onChange={(e) => setGuidedTaskForm((s) => ({ ...s, title: e.target.value }))}
                                     placeholder={`e.g., ${previewTitle}`}
-                                    className="w-full rounded-xl border-0 bg-slate-100 px-4 py-2 text-slate-900 shadow-sm"
+                                    className="glass-input w-full"
                                 />
-                                <p className="mt-1 text-xs text-slate-300">Leave blank to use: {previewTitle}</p>
+                                <p className="mt-1 text-xs text-slate-400">Leave blank to use: {previewTitle}</p>
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-semibold text-slate-200 mb-2">Notes</label>
+                            <label className="block text-sm font-semibold text-slate-300 mb-2">Notes</label>
                             <textarea
                                 value={guidedTaskForm.description}
                                 onChange={(e) => setGuidedTaskForm((s) => ({ ...s, description: e.target.value }))}
                                 rows="3"
                                 placeholder="Optional details to help you stay on track"
-                                className="w-full rounded-3xl border-0 bg-slate-100 px-4 py-3 text-slate-900 shadow-sm"
+                                className="glass-input w-full min-h-[100px]"
                             />
                         </div>
 
-                        <div className="flex gap-3 justify-end pt-4">
+                        <div className="flex flex-col gap-3 justify-end pt-4 sm:flex-row">
                             <button
                                 type="button"
                                 onClick={() => {
                                     onCancel();
                                     setShowGuidedForm(false);
                                 }}
-                                className="rounded-xl bg-white/10 border border-white/20 px-6 py-2 font-semibold text-slate-100"
+                                className="rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
                             >
                                 Cancel
                             </button>
-                            <PrimaryButton type="submit" className="w-auto rounded-xl px-6 py-2 font-bold">
+                            <PrimaryButton type="submit" className="w-full sm:w-auto rounded-full px-6 py-3 font-bold">
                                 Add Task
                             </PrimaryButton>
                         </div>
                     </div>
 
-                    <div className="rounded-3xl border border-white/15 bg-slate-950/70 p-5 shadow-2xl">
+                    <div className="rounded-[28px] border border-white/10 bg-slate-950/70 p-5 shadow-glow">
                         <div className="mb-4 flex items-center justify-between">
                             <div>
                                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Live Preview</p>
-                                <h3 className="text-xl font-bold text-white">Guided task summary</h3>
+                                <h3 className="text-xl font-semibold text-white">Guided task summary</h3>
                             </div>
                             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${URGENCY_STYLES[guidedTaskForm.urgency]}`}>
                                 {guidedTaskForm.urgency}
@@ -166,7 +160,7 @@ const GuidedTaskCreator = ({
                         </div>
 
                         <div className="space-y-3 text-slate-200">
-                            <div className="rounded-2xl bg-slate-900/70 p-4">
+                            <div className="rounded-2xl bg-slate-900/75 p-4">
                                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Module</p>
                                 <p className="mt-2 font-semibold">
                                     {moduleInfo?.module_code || 'Select a module'}
@@ -175,11 +169,11 @@ const GuidedTaskCreator = ({
                             </div>
 
                             <div className="grid gap-3 sm:grid-cols-2">
-                                <div className="rounded-2xl bg-slate-900/70 p-4">
+                                <div className="rounded-2xl bg-slate-900/75 p-4">
                                     <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Type</p>
                                     <p className="mt-2 font-semibold">{guidedTaskForm.taskType}</p>
                                 </div>
-                                <div className="rounded-2xl bg-slate-900/70 p-4">
+                                <div className="rounded-2xl bg-slate-900/75 p-4">
                                     <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Deadline</p>
                                     <p className="mt-2 font-semibold">
                                         {guidedTaskForm.deadline ? `${formatDate(guidedTaskForm.deadline)} • ${formatTime(guidedTaskForm.deadline)}` : 'Not set'}
@@ -188,11 +182,11 @@ const GuidedTaskCreator = ({
                             </div>
 
                             <div className="grid gap-3 sm:grid-cols-2">
-                                <div className="rounded-2xl bg-slate-900/70 p-4">
+                                <div className="rounded-2xl bg-slate-900/75 p-4">
                                     <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Title</p>
                                     <p className="mt-2 font-semibold">{previewTitle}</p>
                                 </div>
-                                <div className="rounded-2xl bg-slate-900/70 p-4">
+                                <div className="rounded-2xl bg-slate-900/75 p-4">
                                     <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Duration</p>
                                     <p className="mt-2 font-semibold">
                                         {guidedTaskForm.estimated_minutes ? `${guidedTaskForm.estimated_minutes} mins` : 'Optional'}

@@ -13,56 +13,52 @@ import './index.css';
 
 function App() {
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={<Navigate to="/dashboard" replace />}
-      />
+    <div className="min-h-screen bg-slate-950 text-[#F5F2EA]">
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
 
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-      <Route
-        path="/modules"
-        element={
-          <ProtectedRoute>
-            <Modules />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/modules"
+          element={
+            <ProtectedRoute>
+              <Modules />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/tasks"
-        element={
-          <ProtectedRoute>
-            <Tasks />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/tasks"
+          element={
+            <ProtectedRoute>
+              <Tasks />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/schedule"
-        element={
-          <ProtectedRoute>
-            <Schedule />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/schedule"
+          element={
+            <ProtectedRoute>
+              <Schedule />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="*"
-        element={<Navigate to="/dashboard" replace />}
-      />
-    </Routes>
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </div>
   );
 }
 
