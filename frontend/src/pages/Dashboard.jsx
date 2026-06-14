@@ -8,6 +8,7 @@ import ProgressBar from '../components/ui/ProgressBar';
 import EmptyState from '../components/ui/EmptyState';
 import IconWrap from '../components/ui/IconWrap';
 import PrimaryButton from '../components/PrimaryButton';
+import { Sidebar } from '../components/SideBar.jsx';
 
 // Helper: match a task to its module.
 // This avoids repeating modules.find(...) throughout the dashboard.
@@ -88,54 +89,6 @@ const TopBar = ({ user }) => (
   </div>
 );
 
-// Sidebar navigation used only for the dashboard layout.
-const DashboardSidebar = ({ user }) => {
-  const location = useLocation();
-  const navItems = [
-    { path: '/dashboard', icon: FaTachometerAlt },
-    { path: '/modules', icon: FaBook },
-    { path: '/tasks', icon: FaTasks },
-    { path: '/schedule', icon: FaCalendarAlt },
-  ];
-
-  return (
-    <aside className="fixed top-4 left-4 z-40 h-[calc(100vh-2rem)] w-[72px] flex flex-col items-center py-5 rounded-[24px] border border-white/8 bg-white/4 backdrop-blur-2xl shadow-panel">
-      {/* Logo mark */}
-      <Link to="/dashboard" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-400/20 text-amber-300 mb-8">
-        <span className="text-base font-bold">P</span>
-      </Link>
-
-      {/* Nav icons */}
-      <nav className="flex flex-col gap-3 flex-1">
-        {navItems.map(({ path, icon: Icon }) => {
-          const isActive = location.pathname === path;
-          return (
-            <Link
-              key={path}
-              to={path}
-              className={`flex h-10 w-10 items-center justify-center rounded-xl transition ${isActive
-                ? 'bg-orange-500/80 text-white shadow-[0_8px_24px_rgba(200,80,20,0.35)]'
-                : 'text-slate-400 hover:bg-white/8 hover:text-white'
-                }`}
-            >
-              <Icon size={18} />
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* Bottom icons */}
-      <div className="flex flex-col gap-3">
-        <button className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-white/8 hover:text-white transition">
-          <FaCog size={16} />
-        </button>
-        <button className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-white/8 hover:text-white transition">
-          <FaSignOutAlt size={16} />
-        </button>
-      </div>
-    </aside>
-  );
-};
 
 // Reusable section wrapper with editorial styling.
 // Visual notes: keep panels soft, dark, and elevated with glass blur.
@@ -471,7 +424,7 @@ export const Dashboard = () => {
   if (loading) {
     return (
       <div className="flex min-h-screen bg-[#1a0f08]">
-        <DashboardSidebar user={user} />
+        <Sidebar />
 
         <main className="flex-1 px-6 py-8 ml-[88px] w-full">
           <div className="glass-panel p-8">
@@ -484,7 +437,7 @@ export const Dashboard = () => {
 
   return (
     <div className="flex min-h-screen bg-[#1a0f08] text-white">
-      <DashboardSidebar user={user} />
+      <Sidebar />
 
       <main className="flex-1 px-6 py-8 ml-[88px] w-full">
         <header className="mb-8 rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-glow backdrop-blur-2xl">

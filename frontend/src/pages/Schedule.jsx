@@ -2,7 +2,7 @@
 // Display generated study schedule
 
 import { useState, useEffect } from 'react';
-import { Navbar } from '../components/Navbar';
+import { Sidebar } from '../components/SideBar';
 import { scheduleAPI } from '../api/api';
 import PrimaryButton from '../components/PrimaryButton';
 
@@ -43,7 +43,7 @@ export const Schedule = () => {
 
   return (
     <div className="min-h-screen bg-[#1a0f08] text-slate-100 pb-24">
-      <Navbar />
+      <Sidebar />
       <div className="w-full px-4 pt-28 pb-10 lg:pl-[88px] lg:px-10">
         <header className="mb-8 rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-glow backdrop-blur-2xl">
           <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Study Schedule</p>

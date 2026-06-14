@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Navbar } from '../components/Navbar';
+import { Sidebar } from '../components/SideBar';
 import { tasksAPI, modulesAPI } from '../api/api';
 import PrimaryButton from '../components/PrimaryButton';
 import TaskForm from '../components/tasks/TaskForm';
@@ -189,7 +189,7 @@ export const Tasks = () => {
 
     return (
         <div className="min-h-screen bg-[#1a0f08] text-slate-100 pb-24">
-            <Navbar />
+            <Sidebar />
             <div className="w-full px-4 pt-28 pb-10 lg:pl-[88px] lg:px-10">
                 <header className="mb-8 rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-glow backdrop-blur-2xl">
                     <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">

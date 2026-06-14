@@ -2,13 +2,14 @@
 // Display and manage modules
 
 import { useState, useEffect } from 'react';
-import { Navbar } from '../components/Navbar';
+import { Sidebar } from '../components/SideBar';
 import { modulesAPI } from '../api/api';
 import PrimaryButton from '../components/PrimaryButton';
+import { FaHeadSideVirus } from 'react-icons/fa';
 
 const ModuleCard = ({ module, onEdit, onDelete }) => (
   <div
-    className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-blue-200 transition-all duration-200 group cursor-pointer"
+    className="glass-card group p-6 transition-all duration-200 hover:border-amber-300/30"
   >
     {/* Color Indicator */}
     <div className="flex items-start justify-between mb-4">
@@ -19,14 +20,14 @@ const ModuleCard = ({ module, onEdit, onDelete }) => (
       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={() => onEdit(module)}
-          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          className="p-2 text-slate-300 hover:bg-white/10 rounded-lg transition-colors"
           title="Edit"
         >
           ✏️
         </button>
         <button
           onClick={() => onDelete(module.id)}
-          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          className="p-2 text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
           title="Delete"
         >
           🗑️
@@ -35,10 +36,10 @@ const ModuleCard = ({ module, onEdit, onDelete }) => (
     </div>
 
     {/* Content */}
-    <h3 className="text-lg font-bold text-gray-900 mb-2">
+    <h3 className="text-lg font-bold text-white mb-2">
       {module.module_code}
     </h3>
-    <p className="text-gray-600 text-sm leading-relaxed">
+    <p className="text-slate-400 text-sm leading-relaxed">
       {module.module_name}
     </p>
   </div>
@@ -64,16 +65,16 @@ const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="glass-panel max-w-md w-full p-8">
+        <h2 className="text-2xl font-bold text-white mb-6">
           {isEditing ? 'Edit Module' : 'Create Module'}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Module Code */}
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">
+            <label className="block text-sm font-semibold text-slate-200 mb-2">
               Module Code
             </label>
             <input
@@ -83,14 +84,14 @@ const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing }) => {
                 setFormData({ ...formData, module_code: e.target.value })
               }
               placeholder="CS2030"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-transparent transition-all"
               required
             />
           </div>
 
           {/* Module Name */}
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">
+            <label className="block text-sm font-semibold text-slate-200 mb-2">
               Module Name
             </label>
             <input
@@ -100,14 +101,14 @@ const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing }) => {
                 setFormData({ ...formData, module_name: e.target.value })
               }
               placeholder="Programming Methodology II"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-transparent transition-all"
               required
             />
           </div>
 
           {/* Color */}
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-3">
+            <label className="block text-sm font-semibold text-slate-200 mb-3">
               Module Color
             </label>
             <div className="flex gap-3">
@@ -117,10 +118,10 @@ const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, color: e.target.value })
                 }
-                className="w-16 h-11 border border-gray-300 rounded-xl cursor-pointer"
+                className="w-16 h-11 border border-white/10 rounded-xl cursor-pointer bg-white/5"
               />
               <div
-                className="flex-1 rounded-xl border-2 border-gray-300"
+                className="flex-1 rounded-xl border-2 border-white/10"
                 style={{ backgroundColor: formData.color }}
               ></div>
             </div>
@@ -131,7 +132,7 @@ const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl font-semibold transition-colors"
+              className="flex-1 px-4 py-3 text-slate-200 bg-white/5 hover:bg-white/10 rounded-xl font-semibold transition-colors"
             >
               Cancel
             </button>
@@ -247,31 +248,33 @@ export const Modules = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+    <div className="flex min-h-screen bg-[#1a0f08] text-white">
+      <Sidebar />
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="flex-1 px-6 py-8 ml-[88px] w-full">
         {/* Header */}
-        <div className="flex items-center justify-between mb-10">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Modules</h1>
-            <p className="text-gray-600">
-              Organize your coursework and learning materials
-            </p>
-          </div>
-         <PrimaryButton
-          type="button"
-          onClick={() => setShowForm(true)}
-          className="px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
-          style={{ width: 'auto', backgroundColor: '#2563eb', color: '#000000' }}
-        >
-          + Create Module
-        </PrimaryButton>
+        <header className="mb-8 rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-glow backdrop-blur-2xl">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Modules</p>
+              <h1 className="mt-2 text-4xl font-semibold text-white">Organize your coursework.</h1>
+              <p className="mt-2 max-w-2xl text-sm text-slate-400">
+                Manage modules and learning materials in one place.
+              </p>
+            </div>
+          <PrimaryButton
+            type="button"
+            onClick={() => setShowForm(true)}
+            className="w-full sm:w-auto rounded-full px-6 py-3 font-semibold"
+          >
+            + Create Module
+          </PrimaryButton>
         </div>
+      </header>
 
         {/* Error Message */}
         {error && (
-          <div className="mb-8 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl font-medium">
+          <div className="mb-6 rounded-[28px] border border-red-400/20 bg-[#581c1c]/20 p-4 text-red-200">
             {error}
           </div>
         )}
@@ -297,32 +300,31 @@ export const Modules = () => {
 
         {/* Loading State */}
         {loading ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
+          <div className="glass-panel p-12 text-center">
             <div className="inline-block">
-              <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+              <div className="w-8 h-8 border-4 border-amber-300/20 border-t-amber-300 rounded-full animate-spin"></div>
             </div>
-            <p className="mt-4 text-gray-600 font-medium">
+            <p className="mt-4 text-slate-400 font-medium">
               Loading modules...
             </p>
           </div>
         ) : modules.length === 0 ? (
           // Empty State
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
+          <div className="glass-panel p-12 text-center">
             <div className="text-5xl mb-4">📚</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            <h2 className="text-2xl font-bold text-white mb-2">
               No modules yet
             </h2>
-            <p className="text-gray-600 mb-8 max-w-md mx-auto">
+            <p className="text-slate-400 mb-8 max-w-md mx-auto">
               Create your first module to start organizing your courses and
               learning materials
             </p>
             <PrimaryButton
            type="button"
            onClick={() => setShowForm(true)}
-           className="px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
-           style={{ width: 'auto', backgroundColor: '#2563eb', color: '#000000' }}
+           className="rounded-full px-6 py-3 font-semibold"
             >
-                      + Create Module
+              + Create Module
             </PrimaryButton>
           </div>
         ) : (
@@ -342,3 +344,5 @@ export const Modules = () => {
     </div>
   );
 };
+
+export default Modules;
