@@ -101,6 +101,12 @@ async function generateSchedule(userId, pool) {
       [userId]
     );
 
+    await pool.query(
+      `DELETE FROM study_sessions
+       WHERE user_id = $1 AND status = 'scheduled'`,
+      [userId]
+    );
+
     if (!tasks.length) return { message: 'No incomplete tasks', sessions: [] };
 
     // Sort tasks using compareTasks
@@ -116,21 +122,29 @@ async function generateSchedule(userId, pool) {
       const blockDuration = Math.min(120, estimatedMinutes); // max 2 hours per block
       const numBlocks = Math.ceil(estimatedMinutes / blockDuration);
 
+      const isOverdue = new Date(task.deadline) < now;
+      const windowEnd = isOverdue ? addDays(now, 1) : new Date(task.deadline);
       let currentDay = new Date(now);
       let blocksAllocated = 0;
 
-      while (blocksAllocated < numBlocks && currentDay <= new Date(task.deadline)) {
-        const blockStart = getStudyBlockStartTime(currentDay, task.preferred_start_time);
+      while (blocksAllocated < numBlocks && currentDay <= windowEnd) {
+        let blockStart = isOverdue
+          ? new Date(currentDay)
+          : getStudyBlockStartTime(currentDay, task.preferred_start_time);
 
-        if (blockStart >= new Date(task.deadline)) break;
+        if (!isOverdue && blockStart >= windowEnd) break;
         if (blockStart < now) {
-          currentDay = addDays(currentDay, 1);
-          continue;
+          if (isOverdue) {
+            blockStart = new Date(now);
+          } else {
+            currentDay = addDays(currentDay, 1);
+            continue;
+          }
         }
 
         const blockEnd = addHours(blockStart, blockDuration / 60);
 
-        if (blockEnd > new Date(task.deadline)) {
+        if (!isOverdue && blockEnd > windowEnd) {
           currentDay = addDays(currentDay, 1);
           continue;
         }
@@ -146,7 +160,7 @@ async function generateSchedule(userId, pool) {
 
         sessions.push(sessionResult.rows[0]);
         blocksAllocated++;
-        currentDay = addDays(currentDay, 1);
+        currentDay = isOverdue ? addHours(currentDay, blockDuration / 60) : addDays(currentDay, 1);
       }
 
       if (blocksAllocated < numBlocks) {
