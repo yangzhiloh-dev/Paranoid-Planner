@@ -44,7 +44,7 @@ export const Schedule = () => {
   return (
     <div className="min-h-screen bg-[#1a0f08] text-slate-100 pb-24">
       <Sidebar />
-      <div className="w-full px-4 pt-28 pb-10 lg:pl-[88px] lg:px-10">
+      <div className="w-full px-6 py-8 ml-[88px] w-full">
         <header className="mb-8 rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-glow backdrop-blur-2xl">
           <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Study Schedule</p>
           <h1 className="mt-3 text-4xl font-semibold text-white">Stay on pace with every session.</h1>

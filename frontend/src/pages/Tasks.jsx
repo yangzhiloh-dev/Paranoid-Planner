@@ -190,7 +190,7 @@ export const Tasks = () => {
     return (
         <div className="min-h-screen bg-[#1a0f08] text-slate-100 pb-24">
             <Sidebar />
-            <div className="w-full px-4 pt-28 pb-10 lg:pl-[88px] lg:px-10">
+            <div className="w-full px-6 py-8 ml-[88px] w-full">
                 <header className="mb-8 rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-glow backdrop-blur-2xl">
                     <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
                         <div className="space-y-3">
@@ -243,27 +243,6 @@ export const Tasks = () => {
                     guidedDurationError={guidedDurationError}
                 />
 
-                <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <PrimaryButton
-                        type="button"
-                        onClick={() => {
-                            setShowCreateForm((s) => !s);
-                            setEditingTask(null);
-                            resetTaskForm();
-                        }}
-                        className="w-full sm:w-auto rounded-full px-6 py-3 font-semibold"
-                    >
-                        {showCreateForm ? 'Cancel' : '+ Create Task'}
-                    </PrimaryButton>
-                    <PrimaryButton
-                        type="button"
-                        variant="glass"
-                        onClick={() => setShowBulkImportModal(true)}
-                        className="w-full sm:w-auto rounded-full px-6 py-3 font-semibold"
-                    >
-                        📥 Bulk Import
-                    </PrimaryButton>
-                </div>
 
                 {showBulkImportModal && <BulkImportModal bulkImportText={bulkImportText} setBulkImportText={setBulkImportText} onClose={() => setShowBulkImportModal(false)} onSubmit={handleBulkImportSubmit} feedback={bulkImportFeedback} />}
 
