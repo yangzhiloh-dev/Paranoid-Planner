@@ -2,7 +2,6 @@
 
 const pool = require('../config/db');
 
-/* Helper List */
 // startOfDay: getting start of the day for a given date 
 const startOfDay = (date) => {
   const d = new Date(date);
@@ -26,11 +25,11 @@ const addDays = (date, days) => {
 // Helper: Check if time is within preferred window
 const isTimeInPreferredWindow = (time, preferredStart, preferredEnd) => {
   if (!preferredStart && !preferredEnd) {
-    return true; // No preference, all times OK
+    return true; 
   }
 
   const timeStr = time.toTimeString().slice(0, 5); // HH:MM format
-
+  
   if (preferredStart && preferredEnd) {
     return timeStr >= preferredStart && timeStr <= preferredEnd;
   }
@@ -55,8 +54,6 @@ const getStudyBlockStartTime = (date, preferredStart, preferredEnd) => {
     const [hours] = preferredStart.split(':').map(Number);
     const blockStart = new Date(date);
     blockStart.setHours(hours, 0, 0, 0);
-
-    // Make sure it's in the future
     if (blockStart < new Date()) {
       return addDays(blockStart, 1);
     }
@@ -67,119 +64,102 @@ const getStudyBlockStartTime = (date, preferredStart, preferredEnd) => {
   // Otherwise use default (9 AM)
   const blockStart = new Date(date);
   blockStart.setHours(defaultStart, 0, 0, 0);
-
   return blockStart;
 };
 
+// Compare two tasks to rank scheduling priority
+function compareTasks(a, b) {
+  if (a.status === 'completed' && b.status !== 'completed') return 1;
+  if (b.status === 'completed' && a.status !== 'completed') return -1;
+
+  if (a.deadline && b.deadline) {
+    const dateA = new Date(a.deadline);
+    const dateB = new Date(b.deadline);
+    if (dateA.getTime() !== dateB.getTime()) return dateA - dateB;
+  }
+
+  if (a.priority !== b.priority) return b.priority - a.priority;
+  return (a.estimated_minutes || 60) - (b.estimated_minutes || 60);
+}
+
+function calculateTaskScore(task) {
+  const now = new Date();
+  const deadline = new Date(task.deadline || now);
+  const timeLeft = Math.max(deadline - now, 1); 
+  return task.priority * 1000 / timeLeft;
+}
+
 // Main scheduling algorithm
-const generateSchedule = async (userId, pool) => {
+async function generateSchedule(userId, pool) {
   try {
     // Fetch incomplete tasks for the user
-    const tasksResult = await pool.query(
-      `SELECT
-        id, user_id, module_id, title, deadline, estimated_minutes,
-        priority, status, preferred_start_time, preferred_end_time
-      FROM tasks
-      WHERE user_id = $1 AND status != 'completed'
-      ORDER BY deadline ASC, priority DESC`,
+    const { rows: tasks } = await pool.query(
+      `SELECT id, user_id, module_id, title, deadline, estimated_minutes,
+              priority, status, preferred_start_time
+       FROM tasks
+       WHERE user_id = $1 AND status != 'completed'`,
       [userId]
     );
 
-    const tasks = tasksResult.rows;
+    if (!tasks.length) return { message: 'No incomplete tasks', sessions: [] };
 
-    if (tasks.length === 0) {
-      return {
-        message: 'No incomplete tasks to schedule',
-        sessions: [],
-      };
-    }
+    // Sort tasks using compareTasks
+    const sortedTasks = tasks.sort(compareTasks);
 
     const sessions = [];
     const now = new Date();
 
-    // Process each task
-    for (const task of tasks) {
-      // Skip tasks with no deadline
-      if (!task.deadline) {
-        continue;
-      }
+    for (const task of sortedTasks) {
+      if (!task.deadline) continue;
 
-      const deadline = new Date(task.deadline);
       const estimatedMinutes = task.estimated_minutes || 60;
-      const blockDurationMinutes = Math.min(120, estimatedMinutes); // 2 hours max per block
+      const blockDuration = Math.min(120, estimatedMinutes); // max 2 hours per block
+      const numBlocks = Math.ceil(estimatedMinutes / blockDuration);
 
-      // Calculate number of blocks needed
-      const numBlocks = Math.ceil(estimatedMinutes / blockDurationMinutes);
-
-      // Calculate available days (from today to deadline)
       let currentDay = new Date(now);
       let blocksAllocated = 0;
 
-      // Try to allocate blocks before deadline
-      while (blocksAllocated < numBlocks && currentDay <= deadline) {
-        // Get a study block start time for this day
-        const blockStart = getStudyBlockStartTime(
-          currentDay,
-          task.preferred_start_time,
-          task.preferred_end_time
-        );
+      while (blocksAllocated < numBlocks && currentDay <= new Date(task.deadline)) {
+        const blockStart = getStudyBlockStartTime(currentDay, task.preferred_start_time);
 
-        // Skip if block start is after deadline
-        if (blockStart >= deadline) {
-          break;
-        }
-
-        // Skip if block start is in the past
+        if (blockStart >= new Date(task.deadline)) break;
         if (blockStart < now) {
           currentDay = addDays(currentDay, 1);
           continue;
         }
 
-        const blockEnd = addHours(blockStart, blockDurationMinutes / 60);
+        const blockEnd = addHours(blockStart, blockDuration / 60);
 
-        // Skip if block extends past deadline
-        if (blockEnd > deadline) {
+        if (blockEnd > new Date(task.deadline)) {
           currentDay = addDays(currentDay, 1);
           continue;
         }
 
-        // Create study session
-        try {
-          const sessionResult = await pool.query(
-            `INSERT INTO study_sessions
-              (user_id, task_id, scheduled_start, scheduled_end, status)
-              VALUES ($1, $2, $3, $4, 'scheduled')
-              RETURNING id, user_id, task_id, scheduled_start, scheduled_end, status`,
-            [userId, task.id, blockStart.toISOString(), blockEnd.toISOString()]
-          );
+        // Insert study session into DB
+        const sessionResult = await pool.query(
+          `INSERT INTO study_sessions
+            (user_id, task_id, scheduled_start, scheduled_end, status)
+            VALUES ($1, $2, $3, $4, 'scheduled')
+            RETURNING id, user_id, task_id, scheduled_start, scheduled_end, status`,
+          [userId, task.id, blockStart.toISOString(), blockEnd.toISOString()]
+        );
 
-          sessions.push(sessionResult.rows[0]);
-          blocksAllocated++;
-        } catch (err) {
-          console.error('Error creating session:', err);
-        }
-
-        // Move to next possible time slot (next day)
+        sessions.push(sessionResult.rows[0]);
+        blocksAllocated++;
         currentDay = addDays(currentDay, 1);
       }
 
-      // Log if we couldn't allocate all blocks(debugging info)
       if (blocksAllocated < numBlocks) {
-        console.warn(
-          `Could only allocate ${blocksAllocated}/${numBlocks} blocks for task "${task.title}" (deadline: ${deadline})`
-        );
+        console.warn(`Only allocated ${blocksAllocated}/${numBlocks} blocks for "${task.title}"`);
       }
     }
 
-    return {
-      message: `Schedule generated with ${sessions.length} study session(s)`,
-      sessions,
-    };
+    return { message: `Schedule generated with ${sessions.length} session(s)`, sessions };
   } catch (err) {
     console.error('Schedule generation error:', err);
     throw err;
   }
-};
+}
 
 // Fetch and return current schedule
 const getSchedule = async (userId, pool) => {
@@ -205,6 +185,8 @@ const getSchedule = async (userId, pool) => {
 };
 
 module.exports = {
+  compareTasks,
+  calculateTaskScore,
   generateSchedule,
   getSchedule,
 };
