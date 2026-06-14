@@ -2,7 +2,7 @@
 // Display generated study schedule
 
 import { useState, useEffect } from 'react';
-import { Sidebar } from '../components/Sidebar';
+import { Sidebar } from '../components/SideBar';
 import { scheduleAPI } from '../api/api';
 import PrimaryButton from '../components/PrimaryButton';
 

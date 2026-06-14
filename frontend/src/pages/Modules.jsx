@@ -2,7 +2,7 @@
 // Display and manage modules
 
 import { useState, useEffect } from 'react';
-import { Sidebar } from '../components/Sidebar';
+import { Sidebar } from '../components/SideBar';
 import { modulesAPI } from '../api/api';
 import PrimaryButton from '../components/PrimaryButton';
 import { FaHeadSideVirus } from 'react-icons/fa';

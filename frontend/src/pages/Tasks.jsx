@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Sidebar } from '../components/Sidebar';
+import { Sidebar } from '../components/SideBar';
 import { tasksAPI, modulesAPI } from '../api/api';
 import PrimaryButton from '../components/PrimaryButton';
 import TaskForm from '../components/tasks/TaskForm';
