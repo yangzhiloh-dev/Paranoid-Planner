@@ -24,4 +24,7 @@ router.put('/:id', moduleController.updateModule);
 // Delete a specific module
 router.delete('/:id', moduleController.deleteModule);
 
+// Import NUS modules (lessons + assignments) from JSON
+router.post('/import', moduleController.importModules);
+
 module.exports = router;
