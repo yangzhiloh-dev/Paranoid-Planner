@@ -89,6 +89,36 @@ function calculateTaskScore(task) {
   return task.priority * 1000 / timeLeft;
 }
 
+// Returns an array of { start: Date, end: Date } for all lessons the user
+// Used by the scheduler to avoid booking study blocks that overlap with fixed class times.
+const getLessonBlocksForDay = async (userId, date, pool) => {
+  const dayOfWeek = date.getDay(); // 0=Sun … 6=Sat
+  const { rows } = await pool.query(
+    `SELECT start_time, end_time FROM lessons
+     WHERE user_id = $1 AND day_of_week = $2`,
+    [userId, dayOfWeek]
+  );
+ 
+  return rows.map(({ start_time, end_time }) => {
+    const [sh, sm] = start_time.split(':').map(Number);
+    const [eh, em] = end_time.split(':').map(Number);
+    const start = new Date(date);
+    start.setHours(sh, sm, 0, 0);
+    const end = new Date(date);
+    end.setHours(eh, em, 0, 0);
+    return { start, end };
+  });
+};
+ 
+// Returns true if [proposedStart, proposedEnd) doesn't overlap any blocked slot.
+const isTimeAvailable = (proposedStart, proposedEnd, blockedTimes) => {
+  for (const { start, end } of blockedTimes) {
+    // Overlap condition: proposed starts before block ends AND ends after block starts
+    if (proposedStart < end && proposedEnd > start) return false;
+  }
+  return true;
+};
+
 // Main scheduling algorithm
 async function generateSchedule(userId, pool) {
   try {
@@ -128,6 +158,8 @@ async function generateSchedule(userId, pool) {
       let blocksAllocated = 0;
 
       while (blocksAllocated < numBlocks && currentDay <= windowEnd) {
+        const lessonBlocks = await getLessonBlocksForDay(userId, currentDay, pool);
+        
         let blockStart = isOverdue
           ? new Date(currentDay)
           : getStudyBlockStartTime(currentDay, task.preferred_start_time);
@@ -146,6 +178,11 @@ async function generateSchedule(userId, pool) {
 
         if (!isOverdue && blockEnd > windowEnd) {
           currentDay = addDays(currentDay, 1);
+          continue;
+        }
+
+        if (!isTimeAvailable(blockStart, blockEnd, lessonBlocks)) {
+          currentDay = addHours(blockStart, 1);
           continue;
         }
 
@@ -182,7 +219,7 @@ const getSchedule = async (userId, pool) => {
       `SELECT
         ss.id, ss.user_id, ss.task_id, ss.scheduled_start, ss.scheduled_end,
         ss.actual_start, ss.actual_end, ss.status, ss.created_at,
-        t.title, t.module_id, m.module_code, m.module_name
+        t.title, t.priority, t.module_id, m.module_code, m.module_name, m.color AS module_color
       FROM study_sessions ss
       LEFT JOIN tasks t ON ss.task_id = t.id
       LEFT JOIN modules m ON t.module_id = m.id
@@ -191,11 +228,61 @@ const getSchedule = async (userId, pool) => {
       [userId]
     );
 
-    return result.rows;
+    return { sessions: sessionsResult.rows, lessons: lessonsResult.rows };
   } catch (err) {
     console.error('Get schedule error:', err);
     throw err;
   }
+};
+
+// Update a single study session (e.g. reschedule its start/end time)
+const updateSession = async (userId, sessionId, fields, pool) => {
+  const { scheduled_start, scheduled_end, status } = fields;
+ 
+  const updates = [];
+  const params = [];
+  let paramCount = 1;
+ 
+  if (scheduled_start !== undefined) {
+    updates.push(`scheduled_start = $${paramCount++}`);
+    params.push(scheduled_start);
+  }
+ 
+  if (scheduled_end !== undefined) {
+    updates.push(`scheduled_end = $${paramCount++}`);
+    params.push(scheduled_end);
+  }
+ 
+  if (status !== undefined) {
+    updates.push(`status = $${paramCount++}`);
+    params.push(status);
+  }
+ 
+  if (updates.length === 0) {
+    return { error: 'NO_FIELDS' };
+  }
+ 
+  updates.push(`updated_at = CURRENT_TIMESTAMP`);
+ 
+  params.push(sessionId);
+  const sessionIdParam = paramCount++;
+ 
+  params.push(userId);
+  const userIdParam = paramCount++;
+ 
+  const result = await pool.query(
+    `UPDATE study_sessions
+     SET ${updates.join(', ')}
+     WHERE id = $${sessionIdParam} AND user_id = $${userIdParam}
+     RETURNING id, user_id, task_id, scheduled_start, scheduled_end, actual_start, actual_end, status, created_at, updated_at`,
+    params
+  );
+ 
+  if (result.rows.length === 0) {
+    return { error: 'NOT_FOUND' };
+  }
+ 
+  return { session: result.rows[0] };
 };
 
 module.exports = {
@@ -203,4 +290,5 @@ module.exports = {
   calculateTaskScore,
   generateSchedule,
   getSchedule,
+  updateSession
 };

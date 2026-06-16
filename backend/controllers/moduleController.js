@@ -190,9 +190,129 @@ const deleteModule = async (req, res) => {
   }
 };
 
+// Each module is upserted (created if missing, skipped if code already exists).
+// Lessons and assignments are inserted fresh — existing ones for the module are replaced so re-importing is idempotent. 
+const importModules = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const userId = req.user.id;
+    const { modules } = req.body;
+ 
+    if (!Array.isArray(modules) || modules.length === 0) {
+      return res.status(400).json({ error: 'Request body must contain a non-empty "modules" array' });
+    }
+ 
+    const colorRegex = /^#[0-9A-Fa-f]{6}$/;
+    const timeRegex  = /^([01]\d|2[0-3]):[0-5]\d$/;
+ 
+    const summary = { modules_created: 0, modules_existing: 0, lessons_inserted: 0, assignments_inserted: 0, errors: [] };
+ 
+    await client.query('BEGIN');
+ 
+    for (const mod of modules) {
+      const { module_code, module_name, color, lessons = [], assignments = [] } = mod;
+ 
+      // validate module fields
+      if (!module_code || !module_name) {
+        summary.errors.push(`Skipped entry: missing module_code or module_name`);
+        continue;
+      }
+ 
+      const finalColor = color && colorRegex.test(color) ? color : '#3B82F6';
+ 
+      // Upsert module — create if not exists, reuse if it does.
+      let moduleId;
+      const existing = await client.query(
+        'SELECT id FROM modules WHERE user_id = $1 AND module_code = $2',
+        [userId, module_code]
+      );
+ 
+      if (existing.rows.length > 0) {
+        moduleId = existing.rows[0].id;
+        summary.modules_existing++;
+      } else {
+        const inserted = await client.query(
+          `INSERT INTO modules (user_id, module_code, module_name, color)
+           VALUES ($1, $2, $3, $4)
+           RETURNING id`,
+          [userId, module_code, module_name, finalColor]
+        );
+        moduleId = inserted.rows[0].id;
+        summary.modules_created++;
+      }
+ 
+      // replace lessons for this module (idempotent re-import)
+      await client.query('DELETE FROM lessons WHERE user_id = $1 AND module_id = $2', [userId, moduleId]);
+ 
+      for (const lesson of lessons) {
+        const { title, day_of_week, start_time, end_time } = lesson;
+ 
+        if (day_of_week == null || !start_time || !end_time) {
+          summary.errors.push(`${module_code}: lesson skipped — missing day_of_week, start_time, or end_time`);
+          continue;
+        }
+        if (!timeRegex.test(start_time) || !timeRegex.test(end_time)) {
+          summary.errors.push(`${module_code}: lesson skipped — times must be HH:MM format`);
+          continue;
+        }
+        if (start_time >= end_time) {
+          summary.errors.push(`${module_code}: lesson skipped — start_time must be before end_time`);
+          continue;
+        }
+ 
+        const lessonTitle = title || `${module_code} Class`;
+        await client.query(
+          `INSERT INTO lessons (user_id, module_id, title, day_of_week, start_time, end_time)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [userId, moduleId, lessonTitle, Number(day_of_week), start_time, end_time]
+        );
+        summary.lessons_inserted++;
+      }
+ 
+      // replace assignments for this module (idempotent re-import)
+      // Only delete tasks that were previously imported (we identify them by
+      // module_id; manual tasks in the same module are also deleted on re-import
+      // acceptable trade-off for simplicity; a future "source" flag could refine this).
+      await client.query(
+        'DELETE FROM tasks WHERE user_id = $1 AND module_id = $2',
+        [userId, moduleId]
+      );
+ 
+      for (const assignment of assignments) {
+        const { title, deadline, estimated_minutes, priority } = assignment;
+ 
+        if (!title) {
+          summary.errors.push(`${module_code}: assignment skipped — missing title`);
+          continue;
+        }
+ 
+        const safePriority = priority != null ? Math.min(5, Math.max(1, Number(priority))) : 3;
+        const safeEstimate = estimated_minutes ? Number(estimated_minutes) : null;
+ 
+        await client.query(
+          `INSERT INTO tasks (user_id, module_id, title, deadline, estimated_minutes, priority, status)
+           VALUES ($1, $2, $3, $4, $5, $6, 'pending')`,
+          [userId, moduleId, title, deadline || null, safeEstimate, safePriority]
+        );
+        summary.assignments_inserted++;
+      }
+    }
+ 
+    await client.query('COMMIT');
+    res.status(201).json({ message: 'Import complete', summary });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Import modules error:', err);
+    res.status(500).json({ error: 'Failed to import modules' });
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   getModules,
   createModule,
   updateModule,
   deleteModule,
+  importModules,
 };
