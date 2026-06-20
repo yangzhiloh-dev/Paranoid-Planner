@@ -18,6 +18,36 @@ const getRandomModuleColor = () =>
     format: 'hex',
   });
 
+const DAY_OF_WEEK = {
+  Sunday: 0,
+  Monday: 1,
+  Tuesday: 2,
+  Wednesday: 3,
+  Thursday: 4,
+  Friday: 5,
+  Saturday: 6,
+};
+
+const MODULE_CODE_REGEX = /^[A-Z]{2,4}\d{4}[A-Z]{0,3}$/;
+
+const normalizeActivityType = (lessonType) => {
+  const type = lessonType.toUpperCase();
+  if (type === 'LEC' || type.includes('LECTURE')) return 'LEC';
+  if (type === 'LAB' || type.includes('LABORATORY')) return 'LAB';
+  if (['TUT', 'REC', 'SEC'].includes(type) || type.includes('TUTORIAL') || type.includes('RECITATION') || type.includes('SECTIONAL')) return 'TUT';
+  return null;
+};
+
+const formatNusModsTime = (time) => `${time.slice(0, 2)}:${time.slice(2)}`;
+
+const getShareParams = (url) => {
+  if ([...url.searchParams].length > 0) return url.searchParams;
+
+  // Some copied links place their query parameters after a hash fragment.
+  const hashQuery = url.hash.includes('?') ? url.hash.slice(url.hash.indexOf('?') + 1) : '';
+  return new URLSearchParams(hashQuery);
+};
+
   //we decided to use nusmods share link to import modules instead of manual
   //can explore esaier nad more ocnveneient alternatives option in teh future
 const parseNusModsShareLink = (shareLink) => {
@@ -62,7 +92,7 @@ const parseNusModsShareLink = (shareLink) => {
 
 const fetchNusModsModule = async ({ moduleCode, selectedClasses }, semester) => {
   const res = await fetch(
-    `https://api.nusmods.com/v2/${getNusModsAcademicYear()}/modules/${encodeURIComponent(moduleCode)}.json`
+    `https://api.nusmods.com/v2/${NUSMODS_ACADEMIC_YEAR}/modules/${encodeURIComponent(moduleCode)}.json`
   );
 
   if (!res.ok) {
