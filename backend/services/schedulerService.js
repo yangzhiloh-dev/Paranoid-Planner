@@ -92,7 +92,7 @@ function calculateTaskScore(task) {
 // Returns an array of { start: Date, end: Date } for all lessons the user
 // Used by the scheduler to avoid booking study blocks that overlap with fixed class times.
 const getLessonBlocksForDay = async (userId, date, pool) => {
-  const dayOfWeek = date.getDay(); // 0=Sun … 6=Sat
+  /*const dayOfWeek = date.getDay(); // 0=Sun … 6=Sat
   const { rows } = await pool.query(
     `SELECT start_time, end_time FROM lessons
      WHERE user_id = $1 AND day_of_week = $2`,
@@ -107,7 +107,8 @@ const getLessonBlocksForDay = async (userId, date, pool) => {
     const end = new Date(date);
     end.setHours(eh, em, 0, 0);
     return { start, end };
-  });
+  });*/
+  return []; //placeholder until we implement lessons scheduling
 };
  
 // Returns true if [proposedStart, proposedEnd) doesn't overlap any blocked slot.
@@ -219,7 +220,7 @@ const getSchedule = async (userId, pool) => {
       `SELECT
         ss.id, ss.user_id, ss.task_id, ss.scheduled_start, ss.scheduled_end,
         ss.actual_start, ss.actual_end, ss.status, ss.created_at,
-        t.title, t.priority, t.module_id, m.module_code, m.module_name, m.color AS module_color
+        t.title AS task_title, t.priority AS task_priority, t.module_id, m.module_code, m.module_name, m.color AS module_color
       FROM study_sessions ss
       LEFT JOIN tasks t ON ss.task_id = t.id
       LEFT JOIN modules m ON t.module_id = m.id
@@ -228,7 +229,7 @@ const getSchedule = async (userId, pool) => {
       [userId]
     );
 
-    return { sessions: sessionsResult.rows, lessons: lessonsResult.rows };
+    return { sessions: result.rows };
   } catch (err) {
     console.error('Get schedule error:', err);
     throw err;
