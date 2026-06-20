@@ -4,7 +4,12 @@ import { Sidebar } from '../components/SideBar';
 import { modulesAPI } from '../api/api';
 import PrimaryButton from '../components/PrimaryButton';
 
-const NUSMODS_ACADEMIC_YEAR = '2023-2024';
+//yes my bumahh actually hardcoded the year, im changing it a function to current time and year lol oops thx to yz for noticing 
+const NUSMODS_ACADEMIC_YEAR = (() => {
+   const now = new Date();//ay starts in aug(7),
+   const startYear = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;//if after aug, then current year, else previous year
+   return `${startYear}-${startYear + 1}`;
+ })();
 
 //changed from manual color selection to using a npm package to do it for me lol
 const getRandomModuleColor = () =>
