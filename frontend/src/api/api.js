@@ -77,6 +77,9 @@ export const modulesAPI = {
 
   deleteModule: (id) =>
     api.delete(`/modules/${id}`),
+
+  importModules: (modules) =>
+    api.post('/modules/import', { modules }),
 };
 
 export const tasksAPI = {

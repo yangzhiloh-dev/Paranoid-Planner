@@ -19,9 +19,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// CSV imports arrive as raw text; JSON imports continue through express.json().
+app.use('/api/modules/import', express.text({ type: ['text/csv', 'application/csv'] }));
 
 // Importing database module
 const pool = require('./config/db');
+const runMigrations = require('./config/runMigrations');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -67,15 +70,26 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-app.listen(PORT, () => {
-  console.log(`\n ParanoidPlanner backend server started`);
-  console.log(` Environment: ${NODE_ENV}`);
-  console.log(` Listening on http://localhost:${PORT}`);
-  console.log(`\nAvailable endpoints:`);
-  console.log(`  POST   /api/auth/register`);
-  console.log(`  POST   /api/auth/login`);
-  console.log(`  GET    /api/auth/me`);
-  console.log(`  GET    /api/health\n`);
-});
+const startServer = async () => {
+  try {
+    // Ensure all tables and import columns exist before accepting API traffic.
+    await runMigrations(pool);
+    app.listen(PORT, () => {
+      console.log(`\n ParanoidPlanner backend server started`);
+      console.log(` Environment: ${NODE_ENV}`);
+      console.log(` Listening on http://localhost:${PORT}`);
+      console.log(`\nAvailable endpoints:`);
+      console.log(`  POST   /api/auth/register`);
+      console.log(`  POST   /api/auth/login`);
+      console.log(`  GET    /api/auth/me`);
+      console.log(`  GET    /api/health\n`);
+    });
+  } catch (err) {
+    console.error('Failed to apply database migrations:', err.message);
+    process.exitCode = 1;
+  }
+};
+
+startServer();
 
 module.exports = app;

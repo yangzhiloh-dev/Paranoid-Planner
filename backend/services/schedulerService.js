@@ -51,13 +51,9 @@ const getStudyBlockStartTime = (date, preferredStart, preferredEnd) => {
 
   // If there's a preferred window, use the start of that window
   if (preferredStart) {
-    const [hours] = preferredStart.split(':').map(Number);
+    const [hours, minutes] = preferredStart.split(':').map(Number);
     const blockStart = new Date(date);
-    blockStart.setHours(hours, 0, 0, 0);
-    if (blockStart < new Date()) {
-      return addDays(blockStart, 1);
-    }
-
+    blockStart.setHours(hours, minutes, 0, 0);
     return blockStart;
   }
 
@@ -120,13 +116,32 @@ const isTimeAvailable = (proposedStart, proposedEnd, blockedTimes) => {
   return true;
 };
 
+// Materialize recurring lesson rows as real Date ranges for the requested day.
+const getStoredLessonBlocksForDay = async (userId, date, database) => {
+  const { rows } = await database.query(
+    `SELECT start_time, end_time FROM lessons
+     WHERE user_id = $1 AND day_of_week = $2`,
+    [userId, date.getDay()]
+  );
+
+  return rows.map(({ start_time, end_time }) => {
+    const [startHour, startMinute] = String(start_time).split(':').map(Number);
+    const [endHour, endMinute] = String(end_time).split(':').map(Number);
+    const start = new Date(date);
+    const end = new Date(date);
+    start.setHours(startHour, startMinute, 0, 0);
+    end.setHours(endHour, endMinute, 0, 0);
+    return { start, end };
+  });
+};
+
 // Main scheduling algorithm
 async function generateSchedule(userId, pool) {
   try {
     // Fetch incomplete tasks for the user
     const { rows: tasks } = await pool.query(
       `SELECT id, user_id, module_id, title, deadline, estimated_minutes,
-              priority, status, preferred_start_time
+              priority, status, preferred_start_time, preferred_end_time
        FROM tasks
        WHERE user_id = $1 AND status != 'completed'`,
       [userId]
@@ -155,50 +170,54 @@ async function generateSchedule(userId, pool) {
 
       const isOverdue = new Date(task.deadline) < now;
       const windowEnd = isOverdue ? addDays(now, 1) : new Date(task.deadline);
-      let currentDay = new Date(now);
+      let currentDay = startOfDay(now);
       let blocksAllocated = 0;
 
       while (blocksAllocated < numBlocks && currentDay <= windowEnd) {
-        const lessonBlocks = await getLessonBlocksForDay(userId, currentDay, pool);
-        
-        let blockStart = isOverdue
-          ? new Date(currentDay)
-          : getStudyBlockStartTime(currentDay, task.preferred_start_time);
+        const lessonBlocks = await getStoredLessonBlocksForDay(userId, currentDay, pool);
+        const scheduledBlocks = sessions.map((session) => ({
+          start: new Date(session.scheduled_start),
+          end: new Date(session.scheduled_end),
+        }));
+        const blockedTimes = [...lessonBlocks, ...scheduledBlocks];
 
-        if (!isOverdue && blockStart >= windowEnd) break;
-        if (blockStart < now) {
-          if (isOverdue) {
-            blockStart = new Date(now);
+        let candidate = getStudyBlockStartTime(currentDay, task.preferred_start_time);
+        if (candidate < now) candidate = new Date(now);
+
+        const dayEnd = new Date(currentDay);
+        if (task.preferred_end_time) {
+          const [hours, minutes] = String(task.preferred_end_time).split(':').map(Number);
+          dayEnd.setHours(hours, minutes, 0, 0);
+        } else {
+          dayEnd.setHours(23, 59, 59, 999);
+        }
+        const candidateWindowEnd = dayEnd < windowEnd ? dayEnd : windowEnd;
+
+        // Search within the day instead of retrying the same colliding start time.
+        while (blocksAllocated < numBlocks) {
+          const currentBlockMinutes = Math.min(120, estimatedMinutes - (blocksAllocated * 120));
+          const blockEnd = addHours(candidate, currentBlockMinutes / 60);
+          if (blockEnd > candidateWindowEnd) break;
+
+          if (isTimeAvailable(candidate, blockEnd, blockedTimes)) {
+            const sessionResult = await pool.query(
+              `INSERT INTO study_sessions
+                (user_id, task_id, scheduled_start, scheduled_end, status)
+                VALUES ($1, $2, $3, $4, 'scheduled')
+                RETURNING id, user_id, task_id, scheduled_start, scheduled_end, status`,
+              [userId, task.id, candidate.toISOString(), blockEnd.toISOString()]
+            );
+
+            sessions.push(sessionResult.rows[0]);
+            blockedTimes.push({ start: candidate, end: blockEnd });
+            blocksAllocated++;
+            candidate = blockEnd;
           } else {
-            currentDay = addDays(currentDay, 1);
-            continue;
+            candidate = addHours(candidate, 0.5);
           }
         }
 
-        const blockEnd = addHours(blockStart, blockDuration / 60);
-
-        if (!isOverdue && blockEnd > windowEnd) {
-          currentDay = addDays(currentDay, 1);
-          continue;
-        }
-
-        if (!isTimeAvailable(blockStart, blockEnd, lessonBlocks)) {
-          currentDay = addHours(blockStart, 1);
-          continue;
-        }
-
-        // Insert study session into DB
-        const sessionResult = await pool.query(
-          `INSERT INTO study_sessions
-            (user_id, task_id, scheduled_start, scheduled_end, status)
-            VALUES ($1, $2, $3, $4, 'scheduled')
-            RETURNING id, user_id, task_id, scheduled_start, scheduled_end, status`,
-          [userId, task.id, blockStart.toISOString(), blockEnd.toISOString()]
-        );
-
-        sessions.push(sessionResult.rows[0]);
-        blocksAllocated++;
-        currentDay = isOverdue ? addHours(currentDay, blockDuration / 60) : addDays(currentDay, 1);
+        currentDay = addDays(currentDay, 1);
       }
 
       if (blocksAllocated < numBlocks) {
@@ -291,5 +310,7 @@ module.exports = {
   calculateTaskScore,
   generateSchedule,
   getSchedule,
-  updateSession
+  updateSession,
+  getStoredLessonBlocksForDay,
+  isTimeAvailable,
 };

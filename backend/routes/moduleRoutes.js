@@ -15,6 +15,9 @@ router.use(authMiddleware);
 // Get all modules for current user
 router.get('/', moduleController.getModules);
 
+// Import must be declared before parameterized module routes.
+router.post('/import', moduleController.importModules);
+
 // Create new module
 router.post('/', moduleController.createModule);
 
@@ -23,8 +26,5 @@ router.put('/:id', moduleController.updateModule);
 
 // Delete a specific module
 router.delete('/:id', moduleController.deleteModule);
-
-// Import NUS modules (lessons + assignments) from JSON
-router.post('/import', moduleController.importModules);
 
 module.exports = router;
