@@ -390,12 +390,16 @@ export const Dashboard = () => {
         const [modulesRes, tasksRes, scheduleRes] = await Promise.all([
           modulesAPI.getModules(),
           tasksAPI.getTasks(),
-          scheduleAPI.getSchedule(),
         ]);
-
         setModules(modulesRes.data.modules || []);
         setTasks(tasksRes.data.tasks || []);
-        setSchedule(scheduleRes.data.sessions || []);
+
+        try {
+          const scheduleResult = await scheduleAPI.getSchedule();
+          setSchedule(scheduleResult.data?.sessions || []);
+        } catch {
+          setSchedule([]);
+        }
       } catch (err) {
         setError(err.response?.data?.error || 'Failed to load dashboard data.');
       } finally {

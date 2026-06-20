@@ -27,7 +27,7 @@ const getSchedule = async (req, res) => {
     const userId = req.user.id;
 
     // Fetch current schedule
-    const sessions = await schedulerService.getSchedule(userId, pool);
+    const { sessions } = await schedulerService.getSchedule(userId, pool);
 
     res.json({
       sessions,
