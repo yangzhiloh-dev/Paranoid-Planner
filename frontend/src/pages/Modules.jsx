@@ -4,41 +4,12 @@ import { Sidebar } from '../components/SideBar';
 import { modulesAPI } from '../api/api';
 import PrimaryButton from '../components/PrimaryButton';
 
-const getNusModsAcademicYear = () => {
-  const now = new Date();
-  const startingYear = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
-  return `${startingYear}-${startingYear + 1}`;
-};
-
-const DAY_OF_WEEK = {
-  Sunday: 0,
-  Monday: 1,
-  Tuesday: 2,
-  Wednesday: 3,
-  Thursday: 4,
-  Friday: 5,
-  Saturday: 6,
-};
-
-const normalizeActivityType = (lessonType) => {
-  const type = lessonType.toUpperCase();
-  if (type === 'LEC' || type.includes('LECTURE')) return 'LEC';
-  if (type === 'LAB' || type.includes('LABORATORY')) return 'LAB';
-  if (['TUT', 'REC', 'SEC'].includes(type) || type.includes('TUTORIAL') || type.includes('RECITATION') || type.includes('SECTIONAL')) return 'TUT';
-  return null;
-};
-
-const formatNusModsTime = (time) => `${time.slice(0, 2)}:${time.slice(2)}`;
-
-const MODULE_CODE_REGEX = /^[A-Z]{2,4}\d{4}[A-Z]{0,3}$/;
-
-const getShareParams = (url) => {
-  if ([...url.searchParams].length > 0) return url.searchParams;
-
-  // Some copied links place the query after a hash fragment.
-  const hashQuery = url.hash.includes('?') ? url.hash.slice(url.hash.indexOf('?') + 1) : '';
-  return new URLSearchParams(hashQuery);
-};
+//yes my bumahh actually hardcoded the year, im changing it a function to current time and year lol oops thx to yz for noticing 
+const NUSMODS_ACADEMIC_YEAR = (() => {
+   const now = new Date();//ay starts in aug(7),
+   const startYear = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;//if after aug, then current year, else previous year
+   return `${startYear}-${startYear + 1}`;
+ })();
 
 //changed from manual color selection to using a npm package to do it for me lol
 const getRandomModuleColor = () =>
