@@ -29,26 +29,40 @@ const parseNusModsShareLink = (shareLink) => {
     throw new Error('Enter a valid NUSMods share link');
   }
 
-  if (!url.hostname.endsWith('nusmods.com') || !url.pathname.includes('/timetable/')) {
+  if ((url.hostname !== 'nusmods.com' && !url.hostname.endsWith('.nusmods.com')) || !url.pathname.includes('/timetable/')) {
     throw new Error('Enter a valid NUSMods timetable share link');
   }
 
-  const moduleCodes = [...url.searchParams.keys()]
-    .map((moduleCode) => moduleCode.trim().toUpperCase())
-    .filter(Boolean);
-
-  const uniqueModuleCodes = [...new Set(moduleCodes)];
-
-  if (uniqueModuleCodes.length === 0) {
-    throw new Error('No module codes were found in the NUSMods link');
+  const semesterMatch = url.pathname.match(/\/timetable\/sem-(\d)/);
+  if (!semesterMatch || !['1', '2'].includes(semesterMatch[1])) {
+    throw new Error('The NUSMods link must specify semester 1 or 2');
   }
 
-  return uniqueModuleCodes;//ensure no dups exists
+  const shareParams = getShareParams(url);
+  const selections = [...shareParams.entries()]
+    .map(([moduleCode, value]) => ({
+      moduleCode: moduleCode.trim().toUpperCase(),
+      selectedClasses: [...value.matchAll(/([A-Z]+):\(([^)]+)\)/g)].map((match) => ({
+        activityType: normalizeActivityType(match[1]),
+        classNo: match[2],
+      })).filter((selection) => selection.activityType),
+    }))
+    .filter(({ moduleCode }) => MODULE_CODE_REGEX.test(moduleCode));
+
+  const uniqueSelections = [...new Map(selections.map((selection) => [selection.moduleCode, selection])).values()];
+
+  if (uniqueSelections.length === 0) {
+    throw new Error(
+      'This timetable URL has no shared modules. In NUSMods, click Share, then copy the generated link (it should contain module codes after "?").'
+    );
+  }
+
+  return { semester: Number(semesterMatch[1]), selections: uniqueSelections };
 };
 
-const fetchNusModsModule = async (moduleCode) => {
+const fetchNusModsModule = async ({ moduleCode, selectedClasses }, semester) => {
   const res = await fetch(
-    `https://api.nusmods.com/v2/${NUSMODS_ACADEMIC_YEAR}/modules/${encodeURIComponent(moduleCode)}.json`
+    `https://api.nusmods.com/v2/${getNusModsAcademicYear()}/modules/${encodeURIComponent(moduleCode)}.json`
   );
 
   if (!res.ok) {
@@ -61,10 +75,28 @@ const fetchNusModsModule = async (moduleCode) => {
     throw new Error(`NUSMods did not return a title for ${moduleCode}`);
   }
 
+  const semesterData = module.semesterData?.find((entry) => entry.semester === semester);
+  if (!semesterData) throw new Error(`${moduleCode} is not offered in semester ${semester}`);
+
+  // Keep exactly the class numbers selected in the share link.
+  const lessons = semesterData.timetable
+    .filter((lesson) => selectedClasses.some((selection) =>
+      selection.classNo === lesson.classNo && selection.activityType === normalizeActivityType(lesson.lessonType)
+    ))
+    .map((lesson) => ({
+      day_of_week: DAY_OF_WEEK[lesson.day],
+      start_time: formatNusModsTime(lesson.startTime),
+      end_time: formatNusModsTime(lesson.endTime),
+      activity_type: normalizeActivityType(lesson.lessonType),
+    }));
+
   return {
     module_code: moduleCode,
     module_name: module.title,
     color: getRandomModuleColor(),
+    lessons,
+    // NUSMods has no assignment feed; this field matches the backend import contract.
+    assignments: [],
   };
 };
 
@@ -287,20 +319,13 @@ export const Modules = () => {
 
     try {
       setSubmitting(true);
-      const moduleCodes = parseNusModsShareLink(shareLink);
+      const { semester, selections } = parseNusModsShareLink(shareLink);
       const importedModules = await Promise.all(
-        moduleCodes.map((moduleCode) => fetchNusModsModule(moduleCode))
+        selections.map((selection) => fetchNusModsModule(selection, semester))
       );
 
-      for (const moduleData of importedModules) {
-        try {
-          await modulesAPI.createModule(moduleData);
-        } catch (err) {
-          if (err.response?.status !== 409) {
-            throw err;
-          }
-        }
-      }
+      // One transactional request persists modules and their fixed lesson blocks.
+      await modulesAPI.importModules(importedModules);
 
       setShowForm(false);
       setFormData({ module_code: '', module_name: '', color: '#3B82F6' });

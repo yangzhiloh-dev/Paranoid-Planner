@@ -2,6 +2,7 @@
 // Handles CRUD operations for modules
 
 const pool = require('../config/db');
+const { importModules: importNusModsModules } = require('./moduleImportController');
 
 // Get all modules for the current user
 const getModules = async (req, res) => {
@@ -192,7 +193,7 @@ const deleteModule = async (req, res) => {
 
 // Each module is upserted (created if missing, skipped if code already exists).
 // Lessons and assignments are inserted fresh — existing ones for the module are replaced so re-importing is idempotent. 
-const importModules = async (req, res) => {
+const legacyImportModules = async (req, res) => {
   const client = await pool.connect();
   try {
     const userId = req.user.id;
@@ -314,5 +315,5 @@ module.exports = {
   createModule,
   updateModule,
   deleteModule,
-  importModules,
+  importModules: importNusModsModules,
 };
