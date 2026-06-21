@@ -27,10 +27,13 @@ const getSchedule = async (req, res) => {
     const userId = req.user.id;
 
     // Fetch current schedule
-    const { sessions } = await schedulerService.getSchedule(userId, pool);
+    const { sessions, lessons } = await schedulerService.getSchedule(userId, pool);
 
     res.json({
       sessions,
+      // Generated study sessions represent assignment work on the calendar.
+      assignments: sessions,
+      lessons,
       count: sessions.length,
     });
   } catch (err) {
