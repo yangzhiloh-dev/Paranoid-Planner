@@ -7,14 +7,12 @@ import { Sidebar } from '../components/SideBar';
 import PrimaryButton from '../components/PrimaryButton';
 import { scheduleAPI } from '../api/api';
 
-// Fixed lesson colors make each activity type easy to identify at a glance.
 const ACTIVITY_STYLES = {
   LEC: { backgroundColor: '#1e3a8a', borderColor: '#3b82f6', label: 'Lecture' },
   TUT: { backgroundColor: '#5b21b6', borderColor: '#8b5cf6', label: 'Tutorial' },
   LAB: { backgroundColor: '#0f766e', borderColor: '#2dd4bf', label: 'Lab' },
 };
 
-// Assignment colors communicate priority while keeping lessons visually distinct.
 const getAssignmentStyle = (priority) => {
   const value = Number(priority);
 
@@ -23,17 +21,14 @@ const getAssignmentStyle = (priority) => {
   return { backgroundColor: '#334155', borderColor: '#64748b' };
 };
 
-// FullCalendar accepts Date objects; invalid API values are omitted safely.
 const toCalendarDate = (value) => {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-// PostgreSQL TIME values may include seconds, which FullCalendar supports directly.
 const toCalendarTime = (value) => (value ? String(value).slice(0, 8) : null);
 
-// Format tooltip dates in the viewer's local timezone.
 const formatDateTime = (value) => {
   const date = toCalendarDate(value);
 
@@ -48,16 +43,23 @@ const formatDateTime = (value) => {
     : 'Not set';
 };
 
-// Convert a recurring lesson record into a read-only FullCalendar event.
+// Lessons become recurring, read-only FullCalendar events.
 const lessonToEvent = (lesson) => {
   const activityType = String(lesson.activity_type || 'LEC').toUpperCase();
   const style = ACTIVITY_STYLES[activityType] || ACTIVITY_STYLES.LEC;
+  const dayOfWeek = Number(lesson.day_of_week);
+  const startTime = toCalendarTime(lesson.start_time);
+  const endTime = toCalendarTime(lesson.end_time);
+
+  if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6 || !startTime || !endTime) {
+    return null;
+  }
 
   return {
     id: `lesson-${lesson.id}`,
-    daysOfWeek: [Number(lesson.day_of_week)],
-    startTime: toCalendarTime(lesson.start_time),
-    endTime: toCalendarTime(lesson.end_time),
+    daysOfWeek: [dayOfWeek],
+    startTime,
+    endTime,
     title: `${lesson.module_code || 'Module'} ${style.label}`,
     editable: false,
     startEditable: false,
@@ -70,33 +72,33 @@ const lessonToEvent = (lesson) => {
       moduleCode: lesson.module_code || 'Module',
       moduleName: lesson.module_name || 'Module name unavailable',
       activityLabel: style.label,
-      startTime: lesson.start_time,
-      endTime: lesson.end_time,
+      startTime,
+      endTime,
     },
   };
 };
 
-// Convert a generated assignment study session into an editable calendar event.
-const assignmentToEvent = (assignment) => {
-  const start = toCalendarDate(assignment.scheduled_start || assignment.start);
-  const end = toCalendarDate(assignment.scheduled_end || assignment.end);
-  const assignmentTitle = assignment.task_title || assignment.title || 'Study session';
-  const priority = assignment.task_priority ?? assignment.priority;
+// Generated study sessions become draggable FullCalendar events.
+const sessionToEvent = (session) => {
+  const start = toCalendarDate(session.scheduled_start || session.start);
+  const end = toCalendarDate(session.scheduled_end || session.end);
+  const assignmentTitle = session.task_title || session.title || 'Study session';
+  const priority = session.task_priority ?? session.priority;
 
   if (!start || !end) return null;
 
   return {
-    id: `assignment-${assignment.id}`,
-    title: `${assignment.module_code || 'Module'} - ${assignmentTitle}`,
+    id: `session-${session.id}`,
+    title: `${session.module_code || 'Module'} - ${assignmentTitle}`,
     start,
     end,
     editable: true,
     ...getAssignmentStyle(priority),
     textColor: '#ffffff',
     extendedProps: {
-      eventType: 'assignment',
-      moduleCode: assignment.module_code || 'Module',
-      moduleName: assignment.module_name || 'Module name unavailable',
+      eventType: 'session',
+      moduleCode: session.module_code || 'Module',
+      moduleName: session.module_name || 'Module name unavailable',
       assignmentTitle,
       priority,
     },
@@ -105,13 +107,12 @@ const assignmentToEvent = (assignment) => {
 
 export const Schedule = () => {
   const [lessons, setLessons] = useState([]);
-  const [assignments, setAssignments] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  // Load both fixed lessons and generated assignment sessions from /schedule.
   const fetchSchedule = useCallback(async () => {
     try {
       setLoading(true);
@@ -120,16 +121,10 @@ export const Schedule = () => {
       const data = response.data || {};
 
       setLessons(Array.isArray(data.lessons) ? data.lessons : []);
-      setAssignments(
-        Array.isArray(data.assignments)
-          ? data.assignments
-          : Array.isArray(data.sessions)
-            ? data.sessions
-            : []
-      );
+      setSessions(Array.isArray(data.sessions) ? data.sessions : []);
     } catch (err) {
       setLessons([]);
-      setAssignments([]);
+      setSessions([]);
       setError(err.response?.data?.error || 'Failed to fetch the schedule. Please try again.');
     } finally {
       setLoading(false);
@@ -140,17 +135,13 @@ export const Schedule = () => {
     fetchSchedule();
   }, [fetchSchedule]);
 
-  // Memoize mapped events so FullCalendar receives a stable event collection.
   const calendarEvents = useMemo(() => {
-    const lessonEvents = lessons
-      .filter((lesson) => lesson.start_time && lesson.end_time)
-      .map(lessonToEvent);
-    const assignmentEvents = assignments.map(assignmentToEvent).filter(Boolean);
+    const lessonEvents = lessons.map(lessonToEvent).filter(Boolean);
+    const sessionEvents = sessions.map(sessionToEvent).filter(Boolean);
 
-    return [...lessonEvents, ...assignmentEvents];
-  }, [assignments, lessons]);
+    return [...lessonEvents, ...sessionEvents];
+  }, [lessons, sessions]);
 
-  // Ask the backend to regenerate sessions, then refresh the calendar data.
   const handleGenerateSchedule = async () => {
     if (generating) return;
 
@@ -168,7 +159,6 @@ export const Schedule = () => {
     }
   };
 
-  // Add a native browser tooltip with complete event details.
   const handleEventMount = ({ event, el }) => {
     const details = event.extendedProps;
 
@@ -180,17 +170,15 @@ export const Schedule = () => {
     el.title = `${details.moduleCode} - ${details.moduleName}\n${details.assignmentTitle}\n${formatDateTime(event.start)} - ${formatDateTime(event.end)}`;
   };
 
-  // Keep assignment events draggable as a preview, but revert until persistence is added.
-  const handleAssignmentMove = (changeInfo) => {
+  const handleSessionMove = (changeInfo) => {
     changeInfo.revert();
-    setNotice('Assignment rescheduling is ready for a future backend update.');
+    setNotice('Session rescheduling is ready for a future backend update.');
   };
 
-  // Render compact event cards with the module and assignment/activity clearly separated.
   const renderEventContent = ({ event, timeText }) => {
     const details = event.extendedProps;
     const subtitle =
-      details.eventType === 'assignment' ? details.assignmentTitle : details.activityLabel;
+      details.eventType === 'session' ? details.assignmentTitle : details.activityLabel;
 
     return (
       <div className="min-w-0 overflow-hidden px-1 py-0.5 leading-tight">
@@ -205,7 +193,6 @@ export const Schedule = () => {
     <div className="flex min-h-screen bg-[#1a0f08] text-white">
       <Sidebar />
 
-      {/* Match the Dashboard's sidebar offset and page spacing exactly. */}
       <main className="ml-[88px] w-full flex-1 px-4 py-6 sm:px-6 sm:py-8">
         <header className="mb-8 rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-glow backdrop-blur-2xl sm:p-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
@@ -231,7 +218,6 @@ export const Schedule = () => {
           </div>
         </header>
 
-        {/* Surface API errors and non-blocking calendar notices above the calendar. */}
         {error && (
           <div className="mb-6 rounded-[28px] border border-red-400/20 bg-[#581c1c]/20 p-4 text-red-200">
             {error}
@@ -243,14 +229,13 @@ export const Schedule = () => {
           </div>
         )}
 
-        {/* Confirm how many fixed NUS timetable rows the API returned. */}
         {!loading && (
           <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-slate-400">
             <span className="rounded-full border border-blue-400/20 bg-blue-900/20 px-3 py-1.5 text-blue-200">
               {lessons.length} fixed NUS timetable event{lessons.length === 1 ? '' : 's'}
             </span>
             <span className="rounded-full border border-amber-400/20 bg-amber-900/20 px-3 py-1.5 text-amber-200">
-              {assignments.length} assignment session{assignments.length === 1 ? '' : 's'}
+              {sessions.length} assignment session{sessions.length === 1 ? '' : 's'}
             </span>
             {lessons.length === 0 && (
               <span>Re-import a NUSMods share link containing selected class groups.</span>
@@ -258,43 +243,48 @@ export const Schedule = () => {
           </div>
         )}
 
-        {/* Calendar panel preserves the existing glass-card visual language. */}
         <section className="schedule-calendar overflow-hidden rounded-[28px] border border-white/10 bg-white/5 p-3 shadow-glow backdrop-blur-xl sm:p-6">
           {loading ? (
             <div className="flex min-h-[560px] items-center justify-center text-slate-400">
               Loading schedule...
             </div>
           ) : (
-            <FullCalendar
-              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-              initialView="timeGridWeek"
-              headerToolbar={{
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek,timeGridDay',
-              }}
-              events={calendarEvents}
-              editable
-              eventDrop={handleAssignmentMove}
-              eventResize={handleAssignmentMove}
-              eventContent={renderEventContent}
-              eventDidMount={handleEventMount}
-              nowIndicator
-              allDaySlot={false}
-              slotMinTime="07:00:00"
-              slotMaxTime="23:00:00"
-              slotDuration="00:30:00"
-              scrollTime="08:00:00"
-              height="auto"
-              expandRows
-              stickyHeaderDates
-              dayMaxEvents
-              eventTimeFormat={{ hour: '2-digit', minute: '2-digit', meridiem: 'short' }}
-            />
+            <>
+              {calendarEvents.length === 0 && (
+                <div className="mb-4 rounded-2xl border border-dashed border-white/10 p-4 text-sm text-slate-400">
+                  No lessons or study sessions yet. Import a NUSMods timetable or generate a schedule to populate the calendar.
+                </div>
+              )}
+              <FullCalendar
+                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                initialView="timeGridWeek"
+                headerToolbar={{
+                  left: 'prev,next today',
+                  center: 'title',
+                  right: 'dayGridMonth,timeGridWeek,timeGridDay',
+                }}
+                events={calendarEvents}
+                editable
+                eventDrop={handleSessionMove}
+                eventResize={handleSessionMove}
+                eventContent={renderEventContent}
+                eventDidMount={handleEventMount}
+                nowIndicator
+                allDaySlot={false}
+                slotMinTime="07:00:00"
+                slotMaxTime="23:00:00"
+                slotDuration="00:30:00"
+                scrollTime="08:00:00"
+                height="auto"
+                expandRows
+                stickyHeaderDates
+                dayMaxEvents
+                eventTimeFormat={{ hour: '2-digit', minute: '2-digit', meridiem: 'short' }}
+              />
+            </>
           )}
         </section>
 
-        {/* Local FullCalendar theme overrides keep the page responsive and on-brand. */}
         <style>{`
           .schedule-calendar {
             --fc-border-color: rgba(255, 255, 255, 0.1);

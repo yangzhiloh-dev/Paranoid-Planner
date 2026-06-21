@@ -1,15 +1,8 @@
-// Implementing basic scheduling logic
-
-const pool = require('../config/db');
-
-// startOfDay: getting start of the day for a given date 
 const startOfDay = (date) => {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   return d;
 };
-
-
 const addHours = (date, hours) => {
   const d = new Date(date);
   d.setHours(d.getHours() + hours);
@@ -22,34 +15,9 @@ const addDays = (date, days) => {
   return d;
 };
 
-// Helper: Check if time is within preferred window
-const isTimeInPreferredWindow = (time, preferredStart, preferredEnd) => {
-  if (!preferredStart && !preferredEnd) {
-    return true; 
-  }
-
-  const timeStr = time.toTimeString().slice(0, 5); // HH:MM format
-  
-  if (preferredStart && preferredEnd) {
-    return timeStr >= preferredStart && timeStr <= preferredEnd;
-  }
-
-  if (preferredStart) {
-    return timeStr >= preferredStart;
-  }
-
-  if (preferredEnd) {
-    return timeStr <= preferredEnd;
-  }
-
-  return true;
-};
-
-// Helper: Get a reasonable study block start time
-const getStudyBlockStartTime = (date, preferredStart, preferredEnd) => {
+const getStudyBlockStartTime = (date, preferredStart) => {
   const defaultStart = 9; // 9 AM default
 
-  // If there's a preferred window, use the start of that window
   if (preferredStart) {
     const [hours, minutes] = preferredStart.split(':').map(Number);
     const blockStart = new Date(date);
@@ -57,13 +25,12 @@ const getStudyBlockStartTime = (date, preferredStart, preferredEnd) => {
     return blockStart;
   }
 
-  // Otherwise use default (9 AM)
   const blockStart = new Date(date);
   blockStart.setHours(defaultStart, 0, 0, 0);
   return blockStart;
 };
 
-// Compare two tasks to rank scheduling priority
+// Rank incomplete tasks by deadline, then priority, then shorter duration.
 function compareTasks(a, b) {
   if (a.status === 'completed' && b.status !== 'completed') return 1;
   if (b.status === 'completed' && a.status !== 'completed') return -1;
@@ -78,24 +45,14 @@ function compareTasks(a, b) {
   return (a.estimated_minutes || 60) - (b.estimated_minutes || 60);
 }
 
-function calculateTaskScore(task) {
-  const now = new Date();
-  const deadline = new Date(task.deadline || now);
-  const timeLeft = Math.max(deadline - now, 1); 
-  return task.priority * 1000 / timeLeft;
-}
-
-// Returns true if [proposedStart, proposedEnd) doesn't overlap any blocked slot.
 const isTimeAvailable = (proposedStart, proposedEnd, blockedTimes) => {
   for (const { start, end } of blockedTimes) {
-    // Overlap condition: proposed starts before block ends AND ends after block starts
     if (proposedStart < end && proposedEnd > start) return false;
   }
   return true;
 };
 
-// Materialize recurring lesson rows as real Date ranges for the requested day.
-const getStoredLessonBlocksForDay = async (userId, date, database) => {
+const getLessonBlocksForDay = async (userId, date, database) => {
   const { rows } = await database.query(
     `SELECT start_time, end_time FROM lessons
      WHERE user_id = $1 AND day_of_week = $2`,
@@ -113,19 +70,17 @@ const getStoredLessonBlocksForDay = async (userId, date, database) => {
   });
 };
 
-// Main scheduling algorithm
-async function generateSchedule(userId, pool) {
+async function generateSchedule(userId, database) {
   try {
-    // Fetch incomplete tasks for the user
-    const { rows: tasks } = await pool.query(
+    const { rows: tasks } = await database.query(
       `SELECT id, user_id, module_id, title, deadline, estimated_minutes,
               priority, status, preferred_start_time, preferred_end_time
        FROM tasks
-       WHERE user_id = $1 AND status != 'completed'`,
+       WHERE user_id = $1 AND status NOT IN ('completed', 'cancelled')`,
       [userId]
     );
 
-    await pool.query(
+    await database.query(
       `DELETE FROM study_sessions
        WHERE user_id = $1 AND status = 'scheduled'`,
       [userId]
@@ -133,7 +88,6 @@ async function generateSchedule(userId, pool) {
 
     if (!tasks.length) return { message: 'No incomplete tasks', sessions: [] };
 
-    // Sort tasks using compareTasks
     const sortedTasks = tasks.sort(compareTasks);
 
     const sessions = [];
@@ -152,7 +106,8 @@ async function generateSchedule(userId, pool) {
       let blocksAllocated = 0;
 
       while (blocksAllocated < numBlocks && currentDay <= windowEnd) {
-        const lessonBlocks = await getStoredLessonBlocksForDay(userId, currentDay, pool);
+        // Fixed lessons block candidate study time before sessions are allocated.
+        const lessonBlocks = await getLessonBlocksForDay(userId, currentDay, database);
         const scheduledBlocks = sessions.map((session) => ({
           start: new Date(session.scheduled_start),
           end: new Date(session.scheduled_end),
@@ -178,7 +133,7 @@ async function generateSchedule(userId, pool) {
           if (blockEnd > candidateWindowEnd) break;
 
           if (isTimeAvailable(candidate, blockEnd, blockedTimes)) {
-            const sessionResult = await pool.query(
+            const sessionResult = await database.query(
               `INSERT INTO study_sessions
                 (user_id, task_id, scheduled_start, scheduled_end, status)
                 VALUES ($1, $2, $3, $4, 'scheduled')
@@ -210,11 +165,10 @@ async function generateSchedule(userId, pool) {
   }
 }
 
-// Fetch and return current schedule
-const getSchedule = async (userId, pool) => {
+const getSchedule = async (userId, database) => {
   try {
     const [sessionResult, lessonResult] = await Promise.all([
-      pool.query(
+      database.query(
         `SELECT
           ss.id, ss.user_id, ss.task_id, ss.scheduled_start, ss.scheduled_end,
           ss.actual_start, ss.actual_end, ss.status, ss.created_at,
@@ -226,7 +180,7 @@ const getSchedule = async (userId, pool) => {
         ORDER BY ss.scheduled_start ASC`,
         [userId]
       ),
-      pool.query(
+      database.query(
         `SELECT
           l.id, l.day_of_week, l.start_time, l.end_time, l.activity_type,
           l.module_id, m.module_code, m.module_name, m.color AS module_color
@@ -245,8 +199,7 @@ const getSchedule = async (userId, pool) => {
   }
 };
 
-// Update a single study session (e.g. reschedule its start/end time)
-const updateSession = async (userId, sessionId, fields, pool) => {
+const updateSession = async (userId, sessionId, fields, database) => {
   const { scheduled_start, scheduled_end, status } = fields;
  
   const updates = [];
@@ -280,7 +233,7 @@ const updateSession = async (userId, sessionId, fields, pool) => {
   params.push(userId);
   const userIdParam = paramCount++;
  
-  const result = await pool.query(
+  const result = await database.query(
     `UPDATE study_sessions
      SET ${updates.join(', ')}
      WHERE id = $${sessionIdParam} AND user_id = $${userIdParam}
@@ -297,10 +250,9 @@ const updateSession = async (userId, sessionId, fields, pool) => {
 
 module.exports = {
   compareTasks,
-  calculateTaskScore,
   generateSchedule,
   getSchedule,
   updateSession,
-  getStoredLessonBlocksForDay,
+  getLessonBlocksForDay,
   isTimeAvailable,
 };
