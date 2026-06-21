@@ -108,11 +108,28 @@ const fetchNusModsModule = async ({ moduleCode, selectedClasses }, semester) => 
   const semesterData = module.semesterData?.find((entry) => entry.semester === semester);
   if (!semesterData) throw new Error(`${moduleCode} is not offered in semester ${semester}`);
 
+  const normalizeClassNo = (classNo) => String(classNo).trim().toUpperCase();
+  const matchesSelection = (lesson, selection) =>
+    normalizeClassNo(selection.classNo) === normalizeClassNo(lesson.classNo)
+    && selection.activityType === normalizeActivityType(lesson.lessonType);
+
+  // A stale share link can point at class numbers from a different academic year.
+  // Fail visibly instead of silently importing a module with no timetable blocks.
+  const unmatchedClasses = selectedClasses.filter(
+    (selection) => !semesterData.timetable.some((lesson) => matchesSelection(lesson, selection))
+  );
+  if (unmatchedClasses.length > 0) {
+    const labels = unmatchedClasses
+      .map((selection) => `${selection.activityType} ${selection.classNo}`)
+      .join(', ');
+    throw new Error(
+      `${moduleCode}: ${labels} did not match the NUSMods ${NUSMODS_ACADEMIC_YEAR} semester ${semester} timetable. Copy a fresh share link from NUSMods.`
+    );
+  }
+
   // Keep exactly the class numbers selected in the share link.
   const lessons = semesterData.timetable
-    .filter((lesson) => selectedClasses.some((selection) =>
-      selection.classNo === lesson.classNo && selection.activityType === normalizeActivityType(lesson.lessonType)
-    ))
+    .filter((lesson) => selectedClasses.some((selection) => matchesSelection(lesson, selection)))
     .map((lesson) => ({
       day_of_week: DAY_OF_WEEK[lesson.day],
       start_time: formatNusModsTime(lesson.startTime),
@@ -314,6 +331,7 @@ export const Modules = () => {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingModule, setEditingModule] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -341,6 +359,7 @@ export const Modules = () => {
 
   const handleImportModules = async (shareLink) => {
     setError('');
+    setNotice('');
 
     if (!shareLink.trim()) {
       setError('NUSMods share link is required');
@@ -354,11 +373,26 @@ export const Modules = () => {
         selections.map((selection) => fetchNusModsModule(selection, semester))
       );
 
+      const selectedClassCount = selections.reduce(
+        (total, selection) => total + selection.selectedClasses.length,
+        0
+      );
+      if (selectedClassCount === 0) {
+        throw new Error(
+          'The share link contains modules but no selected lecture, tutorial, or lab groups. Select your class groups in NUSMods and copy a new Share link.'
+        );
+      }
+
       // One transactional request persists modules and their fixed lesson blocks.
-      await modulesAPI.importModules(importedModules);
+      const response = await modulesAPI.importModules(importedModules);
+      const lessonCount = response.data?.summary?.lessons_imported
+        ?? importedModules.reduce((total, module) => total + module.lessons.length, 0);
 
       setShowForm(false);
       setFormData({ module_code: '', module_name: '', color: '#3B82F6' });
+      setNotice(
+        `Imported ${lessonCount} fixed timetable event${lessonCount === 1 ? '' : 's'}. They are now available on the Schedule page.`
+      );
       fetchModules();
       return true;
     } catch (err) {
@@ -454,6 +488,12 @@ export const Modules = () => {
         {error && (
           <div className="mb-6 rounded-[28px] border border-red-400/20 bg-[#581c1c]/20 p-4 text-red-200">
             {error}
+          </div>
+        )}
+
+        {notice && !error && (
+          <div className="mb-6 rounded-[28px] border border-emerald-400/20 bg-emerald-900/20 p-4 text-emerald-200">
+            {notice}
           </div>
         )}
 
