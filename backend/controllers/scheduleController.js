@@ -1,10 +1,6 @@
-// Schedule Controller
-// Handles schedule generation and retrieval
-
 const pool = require('../config/db');
 const schedulerService = require('../services/schedulerService');
 
-// Generating a new schedule
 const generateSchedule = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -21,18 +17,14 @@ const generateSchedule = async (req, res) => {
   }
 };
 
-// Get current schedule
 const getSchedule = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Fetch current schedule
     const { sessions, lessons } = await schedulerService.getSchedule(userId, pool);
 
     res.json({
       sessions,
-      // Generated study sessions represent assignment work on the calendar.
-      assignments: sessions,
       lessons,
       count: sessions.length,
     });

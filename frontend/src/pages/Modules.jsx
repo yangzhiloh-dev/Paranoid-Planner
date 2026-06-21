@@ -1,17 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import randomColor from 'randomcolor';
+import { FaBookOpen, FaEdit, FaTrash } from 'react-icons/fa';
 import { Sidebar } from '../components/SideBar';
 import { modulesAPI } from '../api/api';
 import PrimaryButton from '../components/PrimaryButton';
 
-//yes my bumahh actually hardcoded the year, im changing it a function to current time and year lol oops thx to yz for noticing 
+// NUSMods academic years begin in August.
 const NUSMODS_ACADEMIC_YEAR = (() => {
-   const now = new Date();//ay starts in aug(7),
-   const startYear = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;//if after aug, then current year, else previous year
-   return `${startYear}-${startYear + 1}`;
- })();
+  const now = new Date();
+  const startYear = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+  return `${startYear}-${startYear + 1}`;
+})();
 
-//changed from manual color selection to using a npm package to do it for me lol
 const getRandomModuleColor = () =>
   randomColor({
     luminosity: 'bright',
@@ -48,8 +48,7 @@ const getShareParams = (url) => {
   return new URLSearchParams(hashQuery);
 };
 
-  //we decided to use nusmods share link to import modules instead of manual
-  //can explore esaier nad more ocnveneient alternatives option in teh future
+// Parse the semester, modules, and selected class groups from a NUSMods share URL.
 const parseNusModsShareLink = (shareLink) => {
   let url;
 
@@ -151,7 +150,6 @@ const ModuleCard = ({ module, onEdit, onDelete }) => (
   <div
     className="glass-card group p-6 transition-all duration-200 hover:border-amber-300/30"
   >
-    {/* Color Indicator */}
     <div className="flex items-start justify-between mb-4">
       <div
         className="w-4 h-4 rounded-full"
@@ -159,23 +157,26 @@ const ModuleCard = ({ module, onEdit, onDelete }) => (
       ></div>
       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
+          type="button"
           onClick={() => onEdit(module)}
           className="p-2 text-slate-300 hover:bg-white/10 rounded-lg transition-colors"
           title="Edit"
+          aria-label={`Edit ${module.module_code}`}
         >
-          ✏️
+          <FaEdit aria-hidden="true" />
         </button>
         <button
+          type="button"
           onClick={() => onDelete(module.id)}
           className="p-2 text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
           title="Delete"
+          aria-label={`Delete ${module.module_code}`}
         >
-          -
+          <FaTrash aria-hidden="true" />
         </button>
       </div>
     </div>
 
-    {/* Content */}
     <h3 className="text-lg font-bold text-white mb-2">
       {module.module_code}
     </h3>
@@ -220,7 +221,7 @@ const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing, loading 
 
   if (!isOpen) return null;
 
-  return (//return modal with the following info: module code, module name, color
+  return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="glass-panel max-w-md w-full p-8">
         <h2 className="text-2xl font-bold text-white mb-6">
@@ -326,7 +327,6 @@ const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing, loading 
   );
 };
 
-//just a bunch of use state calls for different states of the webpage
 export const Modules = () => {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -335,11 +335,6 @@ export const Modules = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingModule, setEditingModule] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    module_code: '',
-    module_name: '',
-    color: '#3B82F6',
-  });
 
   useEffect(() => {
     fetchModules();
@@ -389,7 +384,6 @@ export const Modules = () => {
         ?? importedModules.reduce((total, module) => total + module.lessons.length, 0);
 
       setShowForm(false);
-      setFormData({ module_code: '', module_name: '', color: '#3B82F6' });
       setNotice(
         `Imported ${lessonCount} fixed timetable event${lessonCount === 1 ? '' : 's'}. They are now available on the Schedule page.`
       );
@@ -415,7 +409,6 @@ export const Modules = () => {
       setSubmitting(true);
       await modulesAPI.updateModule(editingModule.id, data);
       setEditingModule(null);
-      setFormData({ module_code: '', module_name: '', color: '#3B82F6' });
       setShowForm(false);
       fetchModules();
       return true;
@@ -445,21 +438,15 @@ export const Modules = () => {
 
   const startEdit = (module) => {
     setEditingModule(module);
-    setFormData({
-      module_code: module.module_code,
-      module_name: module.module_name,
-      color: module.color,
-    });
     setShowForm(true);
   };
 
   const closeForm = () => {
     setShowForm(false);
     setEditingModule(null);
-    setFormData({ module_code: '', module_name: '', color: '#3B82F6' });
   };
 
-  return (//just rendering ocmponents and passing in props to sidebar, module cards
+  return (
     <div className="flex min-h-screen bg-[#1a0f08] text-white">
       <Sidebar />
 
@@ -507,9 +494,9 @@ export const Modules = () => {
           initialData={
             editingModule
               ? {
-                  module_code: formData.module_code,
-                  module_name: formData.module_name,
-                  color: formData.color,
+                  module_code: editingModule.module_code,
+                  module_name: editingModule.module_name,
+                  color: editingModule.color,
                 }
               : null
           }
@@ -530,7 +517,7 @@ export const Modules = () => {
         ) : modules.length === 0 ? (
          
           <div className="glass-panel p-12 text-center">
-            <div className="text-5xl mb-4">📚</div>
+            <FaBookOpen className="mx-auto mb-4 text-5xl text-amber-300" aria-hidden="true" />
             <h2 className="text-2xl font-bold text-white mb-2">
               No modules yet
             </h2>
