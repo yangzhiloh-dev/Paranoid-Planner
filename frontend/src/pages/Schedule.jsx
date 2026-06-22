@@ -3,9 +3,10 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { Sidebar } from '../components/SideBar';
-import PrimaryButton from '../components/PrimaryButton';
 import { scheduleAPI } from '../api/api';
+import { DashboardSidebar } from '../components/dashboard/DashboardSidebar';
+import PrimaryButton from '../components/PrimaryButton';
+import './Dashboard.css';
 
 const ACTIVITY_STYLES = {
   LEC: { backgroundColor: '#1e3a8a', borderColor: '#3b82f6', label: 'Lecture' },
@@ -44,23 +45,26 @@ const formatDateTime = (value) => {
 };
 
 // Lessons become recurring, read-only FullCalendar events.
-const lessonToEvent = (lesson) => {
+const lessonToEvent = (lesson = {}, index = 0) => {
   const activityType = String(lesson.activity_type || 'LEC').toUpperCase();
   const style = ACTIVITY_STYLES[activityType] || ACTIVITY_STYLES.LEC;
   const dayOfWeek = Number(lesson.day_of_week);
-  const startTime = toCalendarTime(lesson.start_time);
-  const endTime = toCalendarTime(lesson.end_time);
+  const startTime = toCalendarTime(lesson.start_time || lesson.start);
+  const endTime = toCalendarTime(lesson.end_time || lesson.end);
+  const moduleCode = lesson.module_code || lesson.module?.module_code || 'Module';
+  const moduleName =
+    lesson.module_name || lesson.module?.module_name || 'Module name unavailable';
 
   if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6 || !startTime || !endTime) {
     return null;
   }
 
   return {
-    id: `lesson-${lesson.id}`,
+    id: `lesson-${lesson.id ?? `${moduleCode}-${dayOfWeek}-${startTime}-${index}`}`,
     daysOfWeek: [dayOfWeek],
     startTime,
     endTime,
-    title: `${lesson.module_code || 'Module'} ${style.label}`,
+    title: `${moduleCode} ${style.label}`,
     editable: false,
     startEditable: false,
     durationEditable: false,
@@ -69,8 +73,8 @@ const lessonToEvent = (lesson) => {
     textColor: '#ffffff',
     extendedProps: {
       eventType: 'lesson',
-      moduleCode: lesson.module_code || 'Module',
-      moduleName: lesson.module_name || 'Module name unavailable',
+      moduleCode,
+      moduleName,
       activityLabel: style.label,
       startTime,
       endTime,
@@ -79,17 +83,32 @@ const lessonToEvent = (lesson) => {
 };
 
 // Generated study sessions become draggable FullCalendar events.
-const sessionToEvent = (session) => {
-  const start = toCalendarDate(session.scheduled_start || session.start);
-  const end = toCalendarDate(session.scheduled_end || session.end);
-  const assignmentTitle = session.task_title || session.title || 'Study session';
+const sessionToEvent = (session = {}, index = 0) => {
+  const start = toCalendarDate(
+    session.scheduled_start || session.start || session.task?.scheduled_start
+  );
+  const providedEnd = toCalendarDate(
+    session.scheduled_end || session.end || session.task?.scheduled_end
+  );
+  const end = start && !providedEnd
+    ? new Date(start.getTime() + 60 * 60 * 1000)
+    : providedEnd;
+  const assignmentTitle =
+    session.task_title || session.title || session.task?.title || 'Study session';
   const priority = session.task_priority ?? session.priority;
+  const moduleCode =
+    session.module_code || session.module?.module_code || session.task?.module_code || 'Module';
+  const moduleName =
+    session.module_name ||
+    session.module?.module_name ||
+    session.task?.module_name ||
+    'Module name unavailable';
 
   if (!start || !end) return null;
 
   return {
-    id: `session-${session.id}`,
-    title: `${session.module_code || 'Module'} - ${assignmentTitle}`,
+    id: `session-${session.id ?? `${moduleCode}-${start.toISOString()}-${index}`}`,
+    title: `${moduleCode} - ${assignmentTitle}`,
     start,
     end,
     editable: true,
@@ -97,8 +116,8 @@ const sessionToEvent = (session) => {
     textColor: '#ffffff',
     extendedProps: {
       eventType: 'session',
-      moduleCode: session.module_code || 'Module',
-      moduleName: session.module_name || 'Module name unavailable',
+      moduleCode,
+      moduleName,
       assignmentTitle,
       priority,
     },
@@ -190,100 +209,107 @@ export const Schedule = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#1a0f08] text-white">
-      <Sidebar />
+    <div className="replica-stage">
+      <div className="replica-shell">
+        <DashboardSidebar />
 
-      <main className="ml-[88px] w-full flex-1 px-4 py-6 sm:px-6 sm:py-8">
-        <header className="mb-8 rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-glow backdrop-blur-2xl sm:p-8">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Study Schedule</p>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                Plan every class and study session.
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-400">
-                Lessons stay fixed while assignment sessions are prioritized around your timetable.
-              </p>
+        <main className="replica-main">
+          <header className="replica-card mb-3 p-6 sm:p-8">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <span className="card-kicker">Study schedule</span>
+                <h1 className="mb-0 mt-1 text-3xl font-bold tracking-tight text-[#fff7ed] sm:text-4xl">
+                  Schedule
+                </h1>
+                <p className="mb-0 mt-2 max-w-2xl text-sm text-[#b9a99d]">
+                  Keep fixed classes and generated study sessions together in one weekly plan.
+                </p>
+              </div>
+
+              <PrimaryButton
+                type="button"
+                onClick={handleGenerateSchedule}
+                loading={generating}
+                disabled={generating}
+                className="w-full shrink-0 px-6 py-3 font-semibold sm:w-auto"
+              >
+                {generating ? 'Generating...' : 'Generate Schedule'}
+              </PrimaryButton>
             </div>
+          </header>
 
-            <PrimaryButton
-              type="button"
-              onClick={handleGenerateSchedule}
-              loading={generating}
-              disabled={generating}
-              className="w-full shrink-0 rounded-full px-6 py-3 font-semibold sm:w-auto"
-            >
-              {generating ? 'Generating...' : 'Generate Schedule'}
-            </PrimaryButton>
-          </div>
-        </header>
-
-        {error && (
-          <div className="mb-6 rounded-[28px] border border-red-400/20 bg-[#581c1c]/20 p-4 text-red-200">
-            {error}
-          </div>
-        )}
-        {notice && !error && (
-          <div className="mb-6 rounded-[28px] border border-amber-400/20 bg-amber-900/20 p-4 text-amber-100">
-            {notice}
-          </div>
-        )}
-
-        {!loading && (
-          <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-slate-400">
-            <span className="rounded-full border border-blue-400/20 bg-blue-900/20 px-3 py-1.5 text-blue-200">
-              {lessons.length} fixed NUS timetable event{lessons.length === 1 ? '' : 's'}
-            </span>
-            <span className="rounded-full border border-amber-400/20 bg-amber-900/20 px-3 py-1.5 text-amber-200">
-              {sessions.length} assignment session{sessions.length === 1 ? '' : 's'}
-            </span>
-            {lessons.length === 0 && (
-              <span>Re-import a NUSMods share link containing selected class groups.</span>
-            )}
-          </div>
-        )}
-
-        <section className="schedule-calendar overflow-hidden rounded-[28px] border border-white/10 bg-white/5 p-3 shadow-glow backdrop-blur-xl sm:p-6">
-          {loading ? (
-            <div className="flex min-h-[560px] items-center justify-center text-slate-400">
-              Loading schedule...
+          {error && (
+            <div className="replica-error" role="alert">
+              {error}
             </div>
-          ) : (
-            <>
-              {calendarEvents.length === 0 && (
-                <div className="mb-4 rounded-2xl border border-dashed border-white/10 p-4 text-sm text-slate-400">
-                  No lessons or study sessions yet. Import a NUSMods timetable or generate a schedule to populate the calendar.
-                </div>
-              )}
-              <FullCalendar
-                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                initialView="timeGridWeek"
-                headerToolbar={{
-                  left: 'prev,next today',
-                  center: 'title',
-                  right: 'dayGridMonth,timeGridWeek,timeGridDay',
-                }}
-                events={calendarEvents}
-                editable
-                eventDrop={handleSessionMove}
-                eventResize={handleSessionMove}
-                eventContent={renderEventContent}
-                eventDidMount={handleEventMount}
-                nowIndicator
-                allDaySlot={false}
-                slotMinTime="07:00:00"
-                slotMaxTime="23:00:00"
-                slotDuration="00:30:00"
-                scrollTime="08:00:00"
-                height="auto"
-                expandRows
-                stickyHeaderDates
-                dayMaxEvents
-                eventTimeFormat={{ hour: '2-digit', minute: '2-digit', meridiem: 'short' }}
-              />
-            </>
           )}
-        </section>
+          {notice && !error && (
+            <div
+              className="mb-3 rounded-lg border border-amber-300/25 bg-amber-950/30 px-4 py-3 text-sm text-amber-100"
+              role="status"
+            >
+              {notice}
+            </div>
+          )}
+
+          {!loading && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-[#b9a99d]">
+              <span className="rounded-full border border-blue-300/20 bg-blue-950/30 px-3 py-1.5 text-blue-100">
+                {lessons.length} fixed timetable event{lessons.length === 1 ? '' : 's'}
+              </span>
+              <span className="rounded-full border border-amber-300/20 bg-amber-950/30 px-3 py-1.5 text-amber-100">
+                {sessions.length} study session{sessions.length === 1 ? '' : 's'}
+              </span>
+              {lessons.length === 0 && (
+                <span>Import a NUSMods share link with selected class groups to add lessons.</span>
+              )}
+            </div>
+          )}
+
+          <section className="schedule-calendar replica-card p-3 sm:p-6" aria-label="Study calendar">
+            {loading ? (
+              <div className="grid min-h-[560px] place-items-center text-center" aria-live="polite">
+                <div>
+                  <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-amber-300/20 border-t-amber-300" />
+                  <p className="mb-0 mt-4 font-medium text-[#b9a99d]">Loading schedule...</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {calendarEvents.length === 0 && (
+                  <div className="mb-4 rounded-lg border border-dashed border-white/10 bg-white/[0.03] p-4 text-sm text-[#b9a99d]">
+                    No lessons or study sessions yet. Import a NUSMods timetable or generate a schedule to populate the calendar.
+                  </div>
+                )}
+                <FullCalendar
+                  plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                  initialView="timeGridWeek"
+                  headerToolbar={{
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay',
+                  }}
+                  events={calendarEvents}
+                  editable
+                  eventDrop={handleSessionMove}
+                  eventResize={handleSessionMove}
+                  eventContent={renderEventContent}
+                  eventDidMount={handleEventMount}
+                  nowIndicator
+                  allDaySlot={false}
+                  slotMinTime="07:00:00"
+                  slotMaxTime="23:00:00"
+                  slotDuration="00:30:00"
+                  scrollTime="08:00:00"
+                  height="auto"
+                  expandRows
+                  stickyHeaderDates
+                  dayMaxEvents
+                  eventTimeFormat={{ hour: '2-digit', minute: '2-digit', meridiem: 'short' }}
+                />
+              </>
+            )}
+          </section>
 
         <style>{`
           .schedule-calendar {
@@ -294,22 +320,23 @@ export const Schedule = () => {
             --fc-today-bg-color: rgba(245, 158, 11, 0.08);
             --fc-now-indicator-color: #f59e0b;
           }
-          .schedule-calendar .fc { color: #cbd5e1; }
-          .schedule-calendar .fc-toolbar-title { color: #fff; font-size: 1.15rem; }
+          .schedule-calendar .fc { color: #d8c9bd; }
+          .schedule-calendar .fc-toolbar-title { color: #fff7ed; font-size: 1.05rem; font-weight: 700; }
           .schedule-calendar .fc-button-primary {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 236, 217, 0.11);
+            border-radius: 0.55rem;
             box-shadow: none;
             text-transform: capitalize;
           }
           .schedule-calendar .fc-button-primary:hover,
           .schedule-calendar .fc-button-primary:not(:disabled).fc-button-active {
-            background: rgba(245, 158, 11, 0.3);
-            border-color: rgba(245, 158, 11, 0.45);
+            background: rgba(255, 100, 54, 0.3);
+            border-color: rgba(255, 157, 77, 0.5);
           }
           .schedule-calendar .fc-col-header-cell-cushion,
-          .schedule-calendar .fc-daygrid-day-number { color: #cbd5e1; padding: 0.5rem; }
-          .schedule-calendar .fc-timegrid-slot-label-cushion { color: #64748b; font-size: 0.75rem; }
+          .schedule-calendar .fc-daygrid-day-number { color: #d8c9bd; padding: 0.5rem; }
+          .schedule-calendar .fc-timegrid-slot-label-cushion { color: #8f7d70; font-size: 0.75rem; }
           .schedule-calendar .fc-event { border-radius: 0.5rem; cursor: default; overflow: hidden; }
           .schedule-calendar .fc-event.fc-event-draggable { cursor: grab; }
           @media (max-width: 767px) {
@@ -319,7 +346,8 @@ export const Schedule = () => {
             .schedule-calendar .fc-button { font-size: 0.75rem; padding: 0.4rem 0.55rem; }
           }
         `}</style>
-      </main>
+        </main>
+      </div>
     </div>
   );
 };
