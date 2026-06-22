@@ -40,6 +40,7 @@ const getConsecutiveStreakEndingOn = (dateSet, dateKey) => {
 };
 
 const getTaskPointBreakdown = (task, context = {}) => {
+  //This is simple rules for points system, find priority, perceived workload and if task complete b4 deadline
   const completedAt = context.completedAt || new Date();
   const completedDateKey = toDateKey(completedAt);
   const completionDates = normalizeDateSet(context.completionDates);
@@ -55,6 +56,8 @@ const getTaskPointBreakdown = (task, context = {}) => {
     completionDates,
     addDays(completedDateKey, -1)
   );
+
+  //tracking streaks: simple -> if u complete task add a point 
   const streakDayCount = alreadyCompletedToday
     ? getConsecutiveStreakEndingOn(completionDates, completedDateKey)
     : priorStreak > 0
