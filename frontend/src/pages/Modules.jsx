@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import randomColor from 'randomcolor';
 import { FaBookOpen, FaEdit, FaTrash } from 'react-icons/fa';
-import { Sidebar } from '../components/SideBar';
 import { modulesAPI } from '../api/api';
+import { DashboardSidebar } from '../components/dashboard/DashboardSidebar';
 import PrimaryButton from '../components/PrimaryButton';
+import './Dashboard.css';
 
 // NUSMods academic years begin in August.
 const NUSMODS_ACADEMIC_YEAR = (() => {
@@ -147,19 +148,21 @@ const fetchNusModsModule = async ({ moduleCode, selectedClasses }, semester) => 
 };
 
 const ModuleCard = ({ module, onEdit, onDelete }) => (
-  <div
-    className="glass-card group p-6 transition-all duration-200 hover:border-amber-300/30"
-  >
-    <div className="flex items-start justify-between mb-4">
+  <article className="replica-card group flex min-h-44 flex-col p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-300/30 sm:p-6">
+    <div className="mb-5 flex items-start justify-between">
       <div
-        className="w-4 h-4 rounded-full"
-        style={{ backgroundColor: module.color }}
-      ></div>
-      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        className="h-3.5 w-3.5 rounded-full ring-4 ring-white/5"
+        style={{
+          backgroundColor: module.color,
+          boxShadow: `0 0 18px ${module.color}66`,
+        }}
+        aria-label={`Module color ${module.color}`}
+      />
+      <div className="flex gap-1 opacity-70 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
         <button
           type="button"
           onClick={() => onEdit(module)}
-          className="p-2 text-slate-300 hover:bg-white/10 rounded-lg transition-colors"
+          className="grid h-9 w-9 place-items-center rounded-full border-0 bg-transparent text-[#b9a99d] transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"
           title="Edit"
           aria-label={`Edit ${module.module_code}`}
         >
@@ -168,7 +171,7 @@ const ModuleCard = ({ module, onEdit, onDelete }) => (
         <button
           type="button"
           onClick={() => onDelete(module.id)}
-          className="p-2 text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+          className="grid h-9 w-9 place-items-center rounded-full border-0 bg-transparent text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-300"
           title="Delete"
           aria-label={`Delete ${module.module_code}`}
         >
@@ -177,13 +180,14 @@ const ModuleCard = ({ module, onEdit, onDelete }) => (
       </div>
     </div>
 
-    <h3 className="text-lg font-bold text-white mb-2">
+    <span className="card-kicker">Module</span>
+    <h2 className="mb-2 text-xl font-bold tracking-tight text-[#fff7ed]">
       {module.module_code}
-    </h3>
-    <p className="text-slate-400 text-sm leading-relaxed">
+    </h2>
+    <p className="m-0 text-sm leading-relaxed text-[#b9a99d]">
       {module.module_name}
     </p>
-  </div>
+  </article>
 );
 
 const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing, loading }) => {
@@ -222,9 +226,10 @@ const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing, loading 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="glass-panel max-w-md w-full p-8">
-        <h2 className="text-2xl font-bold text-white mb-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#120b08]/85 p-4 backdrop-blur-sm">
+      <div className="replica-card max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto p-6 sm:p-8">
+        <span className="card-kicker">{isEditing ? 'Module details' : 'NUSMods timetable'}</span>
+        <h2 className="mb-6 mt-0 text-2xl font-bold tracking-tight text-[#fff7ed]">
           {isEditing ? 'Edit Module' : 'Import from NUSMods'}
         </h2>
 
@@ -232,7 +237,7 @@ const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing, loading 
           {isEditing ? (
             <>
               <div>
-                <label className="block text-sm font-semibold text-slate-200 mb-2">
+                <label className="mb-2 block text-sm font-semibold text-[#f6e9df]">
                   Module Code
                 </label>
                 <input
@@ -242,14 +247,14 @@ const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing, loading 
                     setFormData({ ...formData, module_code: e.target.value })
                   }
                   placeholder="CS2030"
-                  className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-transparent transition-all"
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-white placeholder-[#806f64] transition-all focus:border-amber-300/50 focus:outline-none focus:ring-2 focus:ring-amber-300/20"
                   required
                   disabled={loading}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-200 mb-2">
+                <label className="mb-2 block text-sm font-semibold text-[#f6e9df]">
                   Module Name
                 </label>
                 <input
@@ -259,14 +264,14 @@ const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing, loading 
                     setFormData({ ...formData, module_name: e.target.value })
                   }
                   placeholder="Programming Methodology II"
-                  className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-transparent transition-all"
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-white placeholder-[#806f64] transition-all focus:border-amber-300/50 focus:outline-none focus:ring-2 focus:ring-amber-300/20"
                   required
                   disabled={loading}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-200 mb-3">
+                <label className="mb-3 block text-sm font-semibold text-[#f6e9df]">
                   Module Color
                 </label>
                 <div className="flex gap-3">
@@ -276,11 +281,11 @@ const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing, loading 
                     onChange={(e) =>
                       setFormData({ ...formData, color: e.target.value })
                     }
-                    className="w-16 h-11 border border-white/10 rounded-xl cursor-pointer bg-white/5"
+                    className="h-11 w-16 cursor-pointer rounded-xl border border-white/10 bg-white/[0.06]"
                     disabled={loading}
                   />
                   <div
-                    className="flex-1 rounded-xl border-2 border-white/10"
+                    className="flex-1 rounded-xl border border-white/10"
                     style={{ backgroundColor: formData.color }}
                   ></div>
                 </div>
@@ -288,7 +293,7 @@ const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing, loading 
             </>
           ) : (
             <div>
-              <label className="block text-sm font-semibold text-slate-200 mb-2">
+              <label className="mb-2 block text-sm font-semibold text-[#f6e9df]">
                 NUSMods Share Link
               </label>
               <input
@@ -296,7 +301,7 @@ const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing, loading 
                 value={shareLink}
                 onChange={(e) => setShareLink(e.target.value)}
                 placeholder="https://nusmods.com/timetable/sem-2/share?CFG1002=&CS2030S=LAB:(1);REC:(13);LEC:(44)"
-                className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-transparent transition-all"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-white placeholder-[#806f64] transition-all focus:border-amber-300/50 focus:outline-none focus:ring-2 focus:ring-amber-300/20"
                 required
                 disabled={loading}
               />
@@ -308,14 +313,14 @@ const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing, loading 
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="flex-1 px-4 py-3 text-slate-200 bg-white/5 hover:bg-white/10 rounded-xl font-semibold transition-colors"
+              className="flex-1 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 font-semibold text-[#f6e9df] transition-colors hover:bg-white/10"
             >
               Cancel
             </button>
             <PrimaryButton
               type="submit"
               className="flex-1 px-4 py-3 rounded-xl font-semibold transition-all"
-              style={{ width: 'auto', backgroundColor: '#2563eb', color: '#000000' }}
+              style={{ width: 'auto' }}
               loading={loading}
             >
               {isEditing ? 'Update' : 'Import'}
@@ -447,106 +452,93 @@ export const Modules = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#1a0f08] text-white">
-      <Sidebar />
+    <div className="replica-stage">
+      <div className="replica-shell">
+        <DashboardSidebar />
 
-      <main className="flex-1 px-6 py-8 ml-[88px] w-full">
-        
-        <header className="mb-8 rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-glow backdrop-blur-2xl">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+        <main className="replica-main">
+          <header className="replica-card mb-3 p-6 sm:p-8">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Modules</p>
-              <h1 className="mt-2 text-4xl font-semibold text-white">Organize your coursework.</h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-400">
+              <span className="card-kicker">Course workspace</span>
+              <h1 className="mb-0 mt-1 text-3xl font-bold tracking-tight text-[#fff7ed] sm:text-4xl">
+                Modules
+              </h1>
+              <p className="mb-0 mt-2 max-w-2xl text-sm text-[#b9a99d]">
                 Manage modules and learning materials in one place.
               </p>
             </div>
-          <PrimaryButton
-            type="button"
-            onClick={() => setShowForm(true)}
-            className="w-full sm:w-auto rounded-full px-6 py-3 font-semibold"
-          >
-            Import from NUSMods
-          </PrimaryButton>
-        </div>
-      </header>
-
-        
-        {error && (
-          <div className="mb-6 rounded-[28px] border border-red-400/20 bg-[#581c1c]/20 p-4 text-red-200">
-            {error}
-          </div>
-        )}
-
-        {notice && !error && (
-          <div className="mb-6 rounded-[28px] border border-emerald-400/20 bg-emerald-900/20 p-4 text-emerald-200">
-            {notice}
-          </div>
-        )}
-
-        
-        <FormModal
-          isOpen={showForm}
-          onClose={closeForm}
-          onSubmit={
-            editingModule ? handleUpdateModule : handleImportModules
-          }
-          initialData={
-            editingModule
-              ? {
-                  module_code: editingModule.module_code,
-                  module_name: editingModule.module_name,
-                  color: editingModule.color,
-                }
-              : null
-          }
-          isEditing={!!editingModule}
-          loading={submitting}
-        />
-
-        
-        {loading ? (
-          <div className="glass-panel p-12 text-center">
-            <div className="inline-block">
-              <div className="w-8 h-8 border-4 border-amber-300/20 border-t-amber-300 rounded-full animate-spin"></div>
+              <PrimaryButton
+                type="button"
+                onClick={() => setShowForm(true)}
+                className="w-full px-6 py-3 font-semibold sm:w-auto"
+              >
+                Import from NUSMods
+              </PrimaryButton>
             </div>
-            <p className="mt-4 text-slate-400 font-medium">
-              Loading modules...
-            </p>
-          </div>
-        ) : modules.length === 0 ? (
-         
-          <div className="glass-panel p-12 text-center">
-            <FaBookOpen className="mx-auto mb-4 text-5xl text-amber-300" aria-hidden="true" />
-            <h2 className="text-2xl font-bold text-white mb-2">
-              No modules yet
-            </h2>
-            <p className="text-slate-400 mb-8 max-w-md mx-auto">
-              Create your first module to start organizing your courses and
-              learning materials
-            </p>
-            <PrimaryButton
-           type="button"
-           onClick={() => setShowForm(true)}
-           className="rounded-full px-6 py-3 font-semibold"
-            >
-              Import from NUSMods
-            </PrimaryButton>
-          </div>
-        ) : (
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {modules.map((module) => (
-              <ModuleCard
-                key={module.id}
-                module={module}
-                onEdit={startEdit}
-                onDelete={handleDeleteModule}
-              />
-            ))}
-          </div>
-        )}
-      </main>
+          </header>
+
+          {error && (
+            <div className="replica-error" role="alert">
+              {error}
+            </div>
+          )}
+
+          {notice && !error && (
+            <div className="mb-3 rounded-lg border border-emerald-300/25 bg-emerald-950/30 px-4 py-3 text-sm text-emerald-100" role="status">
+              {notice}
+            </div>
+          )}
+
+          <FormModal
+            isOpen={showForm}
+            onClose={closeForm}
+            onSubmit={editingModule ? handleUpdateModule : handleImportModules}
+            initialData={
+              editingModule
+                ? {
+                    module_code: editingModule.module_code,
+                    module_name: editingModule.module_name,
+                    color: editingModule.color,
+                  }
+                : null
+            }
+            isEditing={!!editingModule}
+            loading={submitting}
+          />
+
+          {loading ? (
+            <section className="replica-card grid min-h-72 place-items-center p-12 text-center" aria-live="polite">
+              <div>
+                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-amber-300/20 border-t-amber-300" />
+                <p className="mb-0 mt-4 font-medium text-[#b9a99d]">Loading modules...</p>
+              </div>
+            </section>
+          ) : modules.length === 0 ? (
+            <section className="replica-card min-h-72 p-12 text-center">
+              <FaBookOpen className="mx-auto mb-4 text-5xl text-amber-300" aria-hidden="true" />
+              <h2 className="mb-2 text-2xl font-bold text-[#fff7ed]">No modules yet</h2>
+              <p className="mx-auto mb-8 max-w-md text-sm leading-relaxed text-[#b9a99d]">
+                Import your NUSMods timetable to start organizing your courses and learning materials.
+              </p>
+              <PrimaryButton type="button" onClick={() => setShowForm(true)} className="px-6 py-3 font-semibold">
+                Import from NUSMods
+              </PrimaryButton>
+            </section>
+          ) : (
+            <section aria-label="Your modules" className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {modules.map((module) => (
+                <ModuleCard
+                  key={module.id}
+                  module={module}
+                  onEdit={startEdit}
+                  onDelete={handleDeleteModule}
+                />
+              ))}
+            </section>
+          )}
+        </main>
+      </div>
     </div>
   );
 };
