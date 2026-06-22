@@ -96,8 +96,7 @@ export const getModulePressure = (modules, tasks, now = new Date()) => {
   });
 };
 
-// The next move favors the earliest incomplete deadline, using priority as the
-// tie-breaker. A shorter first session keeps large estimates approachable.
+// The next move favors the earliest incomplete deadline, using priority as the tie-breaker. A shorter first session keeps large estimates approachable.
 export const getRecommendedNextMove = (tasks, modules) => {
   const task = getPendingTasks(tasks)[0];
   if (!task) return null;
