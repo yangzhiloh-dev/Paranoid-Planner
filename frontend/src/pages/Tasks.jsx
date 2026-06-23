@@ -15,6 +15,45 @@ import {
 } from '../components/tasks/taskConstants';
 import './Dashboard.css';
 
+const COMPLETED_STATUS = 'completed';
+const TASK_VIEW_FILTERS = {
+    overdue: 'overdue',
+    dueThisWeek: 'due-this-week',
+    highPriority: 'high-priority',
+    completed: 'completed',
+};
+
+const getTaskDeadlineDate = (task) => {
+    if (!task.deadline) return null;
+
+    const deadline = new Date(task.deadline);
+    return Number.isNaN(deadline.getTime()) ? null : deadline;
+};
+
+const isIncompleteTask = (task) => task.status !== COMPLETED_STATUS;
+
+const isOverdueTask = (task, now) => {
+    const deadline = getTaskDeadlineDate(task);
+    return Boolean(deadline && deadline < now && isIncompleteTask(task));
+};
+
+const isDueThisWeekTask = (task, now) => {
+    const deadline = getTaskDeadlineDate(task);
+    if (!deadline || !isIncompleteTask(task)) return false;
+
+    const weekFromNow = new Date(now);
+    weekFromNow.setDate(weekFromNow.getDate() + 7);
+    return deadline >= now && deadline <= weekFromNow;
+};
+
+const isHighPriorityTask = (task) =>
+    Number(task.priority) >= 5 && isIncompleteTask(task);
+
+const isCompletedTask = (task) => task.status === COMPLETED_STATUS;
+
+const countTasksByRule = (tasks, rule, now = new Date()) =>
+    tasks.filter((task) => rule(task, now)).length;
+
 export const Tasks = () => {
     const [tasks, setTasks] = useState([]);
     const [modules, setModules] = useState([]);
@@ -27,6 +66,8 @@ export const Tasks = () => {
     const [showGuidedForm, setShowGuidedForm] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
     const [showToast, setShowToast] = useState(false);
+    const [activeTaskView, setActiveTaskView] = useState(null);
+    const [showCompletedTasks, setShowCompletedTasks] = useState(true);
 
     const resetTaskForm = () => setFormData(EMPTY_TASK_FORM);
     const resetGuidedForm = () => {
@@ -153,6 +194,41 @@ export const Tasks = () => {
         });
     };
 
+    const summaryCountTime = new Date();
+    const taskSummaryCards = [
+        {
+            id: TASK_VIEW_FILTERS.overdue,
+            label: 'Overdue',
+            count: countTasksByRule(tasks, isOverdueTask, summaryCountTime),
+            accent: 'bg-rose-300',
+            onClick: () => setActiveTaskView(TASK_VIEW_FILTERS.overdue),
+        },
+        {
+            id: TASK_VIEW_FILTERS.dueThisWeek,
+            label: 'Due this week',
+            count: countTasksByRule(tasks, isDueThisWeekTask, summaryCountTime),
+            accent: 'bg-amber-300',
+            onClick: () => setActiveTaskView(TASK_VIEW_FILTERS.dueThisWeek),
+        },
+        {
+            id: TASK_VIEW_FILTERS.highPriority,
+            label: 'High priority',
+            count: countTasksByRule(tasks, isHighPriorityTask, summaryCountTime),
+            accent: 'bg-orange-300',
+            onClick: () => setActiveTaskView(TASK_VIEW_FILTERS.highPriority),
+        },
+        {
+            id: TASK_VIEW_FILTERS.completed,
+            label: 'Completed',
+            count: countTasksByRule(tasks, isCompletedTask, summaryCountTime),
+            accent: 'bg-emerald-300',
+            onClick: () => {
+                setActiveTaskView(TASK_VIEW_FILTERS.completed);
+                setShowCompletedTasks((current) => !current);
+            },
+        },
+    ];
+
     return (
         <div className="replica-stage">
             <div className="replica-shell">
@@ -172,6 +248,44 @@ export const Tasks = () => {
                             </div>
                         </div>
                     </header>
+
+                    <section
+                        aria-label="Task summary"
+                        className="mb-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+                    >
+                        {taskSummaryCards.map((card) => {
+                            const isActive = activeTaskView === card.id;
+                            return (
+                                <button
+                                    key={card.id}
+                                    type="button"
+                                    onClick={card.onClick}
+                                    aria-pressed={
+                                        card.id === TASK_VIEW_FILTERS.completed
+                                            ? !showCompletedTasks
+                                            : isActive
+                                    }
+                                    className={`group rounded-[11px] border p-5 text-left shadow-[0_12px_26px_rgba(12,6,4,0.22)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-200/30 focus:outline-none focus:ring-2 focus:ring-amber-200/35 ${
+                                        isActive
+                                            ? 'border-amber-200/35 bg-[#1d120ee8]'
+                                            : 'border-white/10 bg-[#160e0be6]'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b9a99d]">
+                                            {card.label}
+                                        </span>
+                                        <span
+                                            className={`h-2.5 w-2.5 rounded-full ${card.accent} shadow-[0_0_18px_rgba(251,191,36,0.24)]`}
+                                        />
+                                    </div>
+                                    <div className="mt-4 text-3xl font-bold tracking-tight text-[#fff7ed]">
+                                        {card.count}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </section>
 
                     <Toast message={showToast ? toastMessage : ''} />
 
