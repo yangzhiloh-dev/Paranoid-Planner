@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { modulesAPI, tasksAPI } from '../api/api';
 import { DashboardSidebar } from '../components/dashboard/DashboardSidebar';
-import PrimaryButton from '../components/PrimaryButton';
-import BulkImportModal from '../components/tasks/BulkImportModal';
 import GuidedTaskCreator from '../components/tasks/GuidedTaskCreator';
 import KanbanColumn from '../components/tasks/KanbanColumn';
 import TaskForm from '../components/tasks/TaskForm';
@@ -22,15 +20,11 @@ export const Tasks = () => {
     const [modules, setModules] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [showCreateForm, setShowCreateForm] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
     const [formData, setFormData] = useState(EMPTY_TASK_FORM);
     const [guidedTaskForm, setGuidedTaskForm] = useState(EMPTY_GUIDED_FORM);
     const [guidedDurationError, setGuidedDurationError] = useState('');
     const [showGuidedForm, setShowGuidedForm] = useState(false);
-    const [showBulkImportModal, setShowBulkImportModal] = useState(false);
-    const [bulkImportText, setBulkImportText] = useState('');
-    const [bulkImportFeedback, setBulkImportFeedback] = useState('');
     const [toastMessage, setToastMessage] = useState('');
     const [showToast, setShowToast] = useState(false);
 
@@ -119,10 +113,6 @@ export const Tasks = () => {
                 await tasksAPI.updateTask(editingTask.id, payload);
                 setEditingTask(null);
                 showSuccessToast('Task updated successfully');
-            } else {
-                await tasksAPI.createTask(payload);
-                setShowCreateForm(false);
-                showSuccessToast('Task created successfully');
             }
             resetTaskForm();
             loadTasksAndModules();
@@ -161,62 +151,6 @@ export const Tasks = () => {
                 : '',
             estimated_minutes: task.estimated_minutes || '',
         });
-        setShowCreateForm(true);
-    };
-
-    const handleBulkImportSubmit = async (e) => {
-        e.preventDefault();
-        setBulkImportFeedback('');
-
-        const lines = bulkImportText
-            .split(/\r?\n/)
-            .map((line) => line.trim())
-            .filter(Boolean);
-        if (!lines.length) {
-            setBulkImportFeedback('Enter at least one task line.');
-            return;
-        }
-
-        const fallbackId = modules.length === 1 ? modules[0].id : null;
-        const created = [];
-        const skipped = [];
-
-        for (const line of lines) {
-            try {
-                const moduleMatch = modules.find((module) =>
-                    line.toUpperCase().includes(module.module_code.toUpperCase())
-                );
-                const moduleId = moduleMatch?.id || fallbackId;
-                if (!moduleId) {
-                    skipped.push(line);
-                    continue;
-                }
-                const title = line
-                    .replace(new RegExp(moduleMatch?.module_code || '', 'gi'), '')
-                    .trim() || line;
-                await tasksAPI.createTask({
-                    title,
-                    module_id: moduleId,
-                    priority: 3,
-                    description: '',
-                });
-                created.push(title);
-            } catch {
-                skipped.push(line);
-            }
-        }
-
-        if (created.length) loadTasksAndModules();
-        setBulkImportText('');
-        setBulkImportFeedback(
-            [
-                created.length ? `${created.length} added` : null,
-                skipped.length ? `${skipped.length} skipped` : null,
-            ]
-                .filter(Boolean)
-                .join('. ')
-        );
-        if (created.length && skipped.length === 0) setShowBulkImportModal(false);
     };
 
     return (
@@ -235,28 +169,6 @@ export const Tasks = () => {
                                 <p className="mb-0 mt-2 max-w-2xl text-sm text-[#b9a99d]">
                                     Organize, prioritize, and track your work in one focused workspace.
                                 </p>
-                            </div>
-
-                            <div className="grid gap-3 sm:flex sm:items-center">
-                                <PrimaryButton
-                                    type="button"
-                                    onClick={() => {
-                                        setShowCreateForm((current) => !current);
-                                        setEditingTask(null);
-                                        resetTaskForm();
-                                    }}
-                                    className="w-full px-6 py-3 font-semibold sm:w-auto"
-                                >
-                                    {showCreateForm ? 'Cancel' : 'Create Task'}
-                                </PrimaryButton>
-                                <PrimaryButton
-                                    type="button"
-                                    variant="glass"
-                                    onClick={() => setShowBulkImportModal(true)}
-                                    className="w-full px-6 py-3 font-semibold sm:w-auto"
-                                >
-                                    Bulk Import
-                                </PrimaryButton>
                             </div>
                         </div>
                     </header>
@@ -282,19 +194,7 @@ export const Tasks = () => {
                         />
                     </div>
 
-                    {showBulkImportModal && (
-                        <div className="[&>div]:!bg-[#120b08]/85 [&>div]:backdrop-blur-sm [&>div>div]:!rounded-[11px] [&>div>div]:!bg-[#160e0bf2]">
-                            <BulkImportModal
-                                bulkImportText={bulkImportText}
-                                setBulkImportText={setBulkImportText}
-                                onClose={() => setShowBulkImportModal(false)}
-                                onSubmit={handleBulkImportSubmit}
-                                feedback={bulkImportFeedback}
-                            />
-                        </div>
-                    )}
-
-                    {(showCreateForm || editingTask) && (
+                    {editingTask && (
                         <div className="[&>form]:!mb-3 [&>form]:!rounded-[11px] [&>form]:!border-white/10 [&>form]:!bg-[#160e0be6] [&>form]:!shadow-[0_12px_26px_rgba(12,6,4,0.22)]">
                             <TaskForm
                                 modules={modules}
@@ -304,7 +204,6 @@ export const Tasks = () => {
                                 editingTask={editingTask}
                                 onCancel={() => {
                                     setEditingTask(null);
-                                    setShowCreateForm(false);
                                     resetTaskForm();
                                 }}
                             />
