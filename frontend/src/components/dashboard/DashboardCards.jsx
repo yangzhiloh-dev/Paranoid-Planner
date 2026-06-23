@@ -5,6 +5,7 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaEllipsisH,
+  FaFire,
 } from 'react-icons/fa';
 import {
   DAY_MS,
@@ -257,6 +258,41 @@ export const PriorityCard = ({ highPriorityCount }) => (
     </div>
   </DashboardCard>
 );
+
+/*show cases points, streaks*/
+
+export const ProductivityCard = ({ summary }) => {
+  const totalPoints = Number(summary?.total_points || 0);
+  const weeklyPoints = Number(summary?.weekly_points || 0);
+  const streak = Number(summary?.current_streak || 0);
+  const completedToday = Boolean(summary?.completed_today);
+  const streakLabel = completedToday
+    ? 'Maintained today'
+    : streak > 0
+      ? 'Complete one today'
+      : 'Start a streak';
+
+  return (
+    <DashboardCard
+      className="score-card productivity-card"
+      aria-labelledby="productivity-points-title"
+    >
+      <div>
+        <span id="productivity-points-title">Productivity points</span>
+        <strong>
+          {totalPoints}
+          <small>pts</small>
+        </strong>
+        <p>{weeklyPoints} pts this week</p>
+      </div>
+      <div className="productivity-streak" aria-label={`${streak} day streak`}>
+        <FaFire aria-hidden="true" />
+        <strong>{streak}d</strong>
+        <span>{streakLabel}</span>
+      </div>
+    </DashboardCard>
+  );
+};
 
 export const ProgressCard = ({ progress }) => (
   <DashboardCard className="progress-card" aria-labelledby="progress-title">

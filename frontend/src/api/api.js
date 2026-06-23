@@ -6,6 +6,9 @@ const api = axios.create({
   baseURL: API_URL,
 });
 
+/* Request interceptor
+  * Automatically attach Authorization header when token exists.
+  */
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -18,6 +21,11 @@ api.interceptors.request.use(
   },
   (error) => Promise.reject(error)
 );
+/* Response interceptor
+ * - allows for logging 
+ * - If a 401 error, token is removed and user is redirected to login.
+ * - Re-throws error so caller code can handle specific UI msgs.
+ */
 
 api.interceptors.response.use(
   (response) => response,
@@ -33,13 +41,24 @@ api.interceptors.response.use(
       localStorage.removeItem('token');
 
       if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+          window.location.href = '/login';
       }
     }
 
     return Promise.reject(error);
   }
 );
+
+/* Exported service helpers
+ *
+ * Each object groups related endpoints and returns the axios promise.
+ * - authAPI: auth endpoints (register/login/getMe)
+ * - modulesAPI: module CRUD and import eendpoints
+ * - tasksAPI: task CRUD endpoints
+ * 
+ * - scheduleAPI: schedule endpoints
+ * - productivityAPI: productivity  endpoint
+ */
 
 export const authAPI = {
   register: (name, email, password) =>
@@ -73,14 +92,14 @@ export const tasksAPI = {
   getTasks: () =>
     api.get('/tasks'),
 
-  createTask: (data) =>
+  createTask: ( data) =>
     api.post('/tasks', data),
 
-  updateTask: (id, data) =>
+  updateTask: (id , data) =>
     api.put(`/tasks/${id}`, data),
 
-  deleteTask: (id) =>
-    api.delete(`/tasks/${id}`),
+  deleteTask:  (id) =>
+     api.delete(`/tasks/${id}`),
 };
 
 export const scheduleAPI = {
@@ -89,6 +108,11 @@ export const scheduleAPI = {
 
   getSchedule: () =>
     api.get('/schedule'),
+};
+
+export const productivityAPI = {
+  getSummary: () =>
+    api.get('/productivity/summary'),
 };
 
 export default api;
