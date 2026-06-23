@@ -22,6 +22,10 @@ const TASK_VIEW_FILTERS = {
     highPriority: 'high-priority',
     completed: 'completed',
 };
+const TASK_BOARD_VIEWS = {
+    priority: 'priority',
+    module: 'module',
+};
 
 const getTaskDeadlineDate = (task) => {
     if (!task.deadline) return null;
@@ -68,6 +72,7 @@ export const Tasks = () => {
     const [showToast, setShowToast] = useState(false);
     const [activeTaskView, setActiveTaskView] = useState(null);
     const [showCompletedTasks, setShowCompletedTasks] = useState(true);
+    const [activeView, setActiveView] = useState(TASK_BOARD_VIEWS.priority);
 
     const resetTaskForm = () => setFormData(EMPTY_TASK_FORM);
     const resetGuidedForm = () => {
@@ -228,6 +233,16 @@ export const Tasks = () => {
             },
         },
     ];
+    const taskBoardViewOptions = [
+        {
+            id: TASK_BOARD_VIEWS.priority,
+            label: 'Priority View',
+        },
+        {
+            id: TASK_BOARD_VIEWS.module,
+            label: 'Module View',
+        },
+    ];
 
     return (
         <div className="replica-stage">
@@ -324,7 +339,42 @@ export const Tasks = () => {
                         </div>
                     )}
 
-                    {loading ? (
+                    <div className="mb-3 flex flex-col gap-3 rounded-[11px] border border-white/10 bg-[#160e0be6] p-3 shadow-[0_12px_26px_rgba(12,6,4,0.22)] sm:flex-row sm:items-center sm:justify-between">
+                        <span className="px-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#b9a99d]">
+                            Task view
+                        </span>
+                        <div className="grid gap-2 rounded-[9px] border border-white/10 bg-[#0f0907]/70 p-1 sm:flex">
+                            {taskBoardViewOptions.map((option) => {
+                                const isActive = activeView === option.id;
+                                return (
+                                    <button
+                                        key={option.id}
+                                        type="button"
+                                        onClick={() => setActiveView(option.id)}
+                                        aria-pressed={isActive}
+                                        className={`rounded-[8px] px-4 py-2 text-sm font-semibold transition duration-200 focus:outline-none focus:ring-2 focus:ring-amber-200/35 ${
+                                            isActive
+                                                ? 'bg-amber-200 text-[#20120d] shadow-[0_10px_22px_rgba(251,191,36,0.18)]'
+                                                : 'text-[#d8c8bb] hover:bg-white/5 hover:text-[#fff7ed]'
+                                        }`}
+                                    >
+                                        {option.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {activeView === TASK_BOARD_VIEWS.module ? (
+                        <section className="replica-card grid min-h-72 place-items-center p-12 text-center">
+                            <div>
+                                <span className="card-kicker">Module View</span>
+                                <p className="mb-0 mt-3 text-lg font-semibold text-[#fff7ed]">
+                                    Module View coming next
+                                </p>
+                            </div>
+                        </section>
+                    ) : loading ? (
                         <section
                             className="replica-card grid min-h-72 place-items-center p-12 text-center"
                             aria-live="polite"
