@@ -2,15 +2,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { modulesAPI, tasksAPI } from '../api/api';
 import { DashboardSidebar } from '../components/dashboard/DashboardSidebar';
 import GuidedTaskCreator from '../components/tasks/GuidedTaskCreator';
-import KanbanColumn from '../components/tasks/KanbanColumn';
 import TaskForm from '../components/tasks/TaskForm';
 import Toast from '../components/tasks/Toast';
 import {
     EMPTY_GUIDED_FORM,
     EMPTY_TASK_FORM,
-    TASK_COLUMNS,
     buildGuidedTaskPayload,
     buildTaskPayload,
+    formatDate,
+    formatTime,
+    getModule,
+    getPriorityLabel,
     parseOptionalPositiveNumber,
 } from '../components/tasks/taskConstants';
 import './Dashboard.css';
@@ -26,6 +28,32 @@ const TASK_BOARD_VIEWS = {
     priority: 'priority',
     module: 'module',
 };
+const PRIORITY_BUCKETS = [
+    {
+        id: 'overdue',
+        title: 'Overdue',
+        emptyText: 'Nothing overdue. Good.',
+        accent: 'bg-rose-300',
+    },
+    {
+        id: 'dueThisWeek',
+        title: 'Due this week',
+        emptyText: 'No tasks due this week.',
+        accent: 'bg-amber-300',
+    },
+    {
+        id: 'highPriority',
+        title: 'High priority',
+        emptyText: 'No high-priority tasks left.',
+        accent: 'bg-orange-300',
+    },
+    {
+        id: 'upcomingNext14Days',
+        title: 'Upcoming next 14 days',
+        emptyText: 'No upcoming tasks in the next two weeks.',
+        accent: 'bg-emerald-300',
+    },
+];
 
 const getTaskDeadlineDate = (task) => {
     if (!task.deadline) return null;
@@ -58,6 +86,94 @@ const isCompletedTask = (task) => task.status === COMPLETED_STATUS;
 const countTasksByRule = (tasks, rule, now = new Date()) =>
     tasks.filter((task) => rule(task, now)).length;
 
+const isWithinDays = (deadline, now, days) => {
+    if (!deadline || deadline < now) return false;
+
+    const limit = new Date(now);
+    limit.setDate(limit.getDate() + days);
+    return deadline <= limit;
+};
+
+const sortTasksByDeadlineAndPriority = (a, b) => {
+    const firstDeadline = getTaskDeadlineDate(a)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+    const secondDeadline = getTaskDeadlineDate(b)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+    if (firstDeadline !== secondDeadline) return firstDeadline - secondDeadline;
+
+    return Number(b.priority || 0) - Number(a.priority || 0);
+};
+
+const buildPriorityBuckets = (tasks, now = new Date()) => {
+    const activeTasks = tasks.filter(isIncompleteTask);
+    const assignedTaskIds = new Set();
+    const bucketTasks = {
+        overdue: [],
+        dueThisWeek: [],
+        highPriority: [],
+        upcomingNext14Days: [],
+    };
+
+    const assignMatchingTasks = (bucketId, predicate) => {
+        activeTasks.forEach((task) => {
+            if (assignedTaskIds.has(task.id) || !predicate(task)) return;
+
+            bucketTasks[bucketId].push(task);
+            assignedTaskIds.add(task.id);
+        });
+    };
+
+    assignMatchingTasks('overdue', (task) => {
+        const deadline = getTaskDeadlineDate(task);
+        return Boolean(deadline && deadline < now);
+    });
+    assignMatchingTasks('dueThisWeek', (task) =>
+        isWithinDays(getTaskDeadlineDate(task), now, 7)
+    );
+    assignMatchingTasks('highPriority', (task) => Number(task.priority) >= 5);
+    assignMatchingTasks('upcomingNext14Days', (task) =>
+        isWithinDays(getTaskDeadlineDate(task), now, 14)
+    );
+
+    Object.keys(bucketTasks).forEach((bucketId) => {
+        bucketTasks[bucketId].sort(sortTasksByDeadlineAndPriority);
+    });
+
+    const laterHiddenCount = activeTasks.filter(
+        (task) => !assignedTaskIds.has(task.id)
+    ).length;
+
+    return { bucketTasks, laterHiddenCount };
+};
+
+const getStatusLabel = (status) => {
+    if (status === 'in_progress') return 'In progress';
+    if (status === COMPLETED_STATUS) return 'Completed';
+    return 'Pending';
+};
+
+const getStatusBadgeClass = (status) => {
+    if (status === 'in_progress') {
+        return 'border-amber-300/20 bg-amber-300/15 text-amber-100';
+    }
+    if (status === COMPLETED_STATUS) {
+        return 'border-emerald-300/20 bg-emerald-300/15 text-emerald-100';
+    }
+    return 'border-sky-300/20 bg-sky-300/15 text-sky-100';
+};
+
+const getPriorityBadgeClass = (priority) => {
+    const numericPriority = Number(priority);
+    if (numericPriority >= 5) {
+        return 'border-rose-300/25 bg-rose-300/15 text-rose-100';
+    }
+    if (numericPriority >= 4) {
+        return 'border-orange-300/25 bg-orange-300/15 text-orange-100';
+    }
+    if (numericPriority >= 3) {
+        return 'border-amber-300/20 bg-amber-300/10 text-amber-100';
+    }
+    return 'border-white/10 bg-white/[0.08] text-[#d8c8bb]';
+};
+
 export const Tasks = () => {
     const [tasks, setTasks] = useState([]);
     const [modules, setModules] = useState([]);
@@ -73,6 +189,7 @@ export const Tasks = () => {
     const [activeTaskView, setActiveTaskView] = useState(null);
     const [showCompletedTasks, setShowCompletedTasks] = useState(true);
     const [activeView, setActiveView] = useState(TASK_BOARD_VIEWS.priority);
+    const [visiblePriorityBuckets, setVisiblePriorityBuckets] = useState([]);
 
     const resetTaskForm = () => setFormData(EMPTY_TASK_FORM);
     const resetGuidedForm = () => {
@@ -105,6 +222,21 @@ export const Tasks = () => {
         const timer = setTimeout(() => setShowToast(false), 2600);
         return () => clearTimeout(timer);
     }, [showToast]);
+
+    useEffect(() => {
+        if (loading) return;
+
+        const { bucketTasks } = buildPriorityBuckets(tasks);
+        const bucketsWithTasks = PRIORITY_BUCKETS
+            .filter((bucket) => bucketTasks[bucket.id].length > 0)
+            .map((bucket) => bucket.id);
+
+        if (!bucketsWithTasks.length) return;
+
+        setVisiblePriorityBuckets((current) => [
+            ...new Set([...current, ...bucketsWithTasks]),
+        ]);
+    }, [loading, tasks]);
 
     const showSuccessToast = (msg) => {
         setToastMessage(msg);
@@ -243,6 +375,15 @@ export const Tasks = () => {
             label: 'Module View',
         },
     ];
+    const { bucketTasks, laterHiddenCount } = buildPriorityBuckets(
+        tasks,
+        summaryCountTime
+    );
+    const visibleBuckets = PRIORITY_BUCKETS.filter(
+        (bucket) =>
+            bucketTasks[bucket.id].length > 0 ||
+            visiblePriorityBuckets.includes(bucket.id)
+    );
 
     return (
         <div className="replica-stage">
@@ -386,28 +527,185 @@ export const Tasks = () => {
                                 </p>
                             </div>
                         </section>
-                    ) : (
-                        <section
-                            aria-label="Task board"
-                            className="grid gap-3 lg:grid-cols-3 [&>div]:!overflow-hidden [&>div]:!rounded-[11px] [&>div]:!border-white/10 [&>div]:!bg-[#160e0be6] [&>div]:!shadow-[0_12px_26px_rgba(12,6,4,0.22)]"
-                        >
-                            {TASK_COLUMNS.map((column) => {
-                                const columnTasks = tasks.filter(
-                                    (task) => task.status === column.status
-                                );
-                                return (
-                                    <KanbanColumn
-                                        key={column.status}
-                                        column={column}
-                                        tasks={columnTasks}
-                                        modules={modules}
-                                        onStatusChange={handleUpdateTaskStatus}
-                                        onEdit={startEdit}
-                                        onDelete={handleDeleteTask}
-                                    />
-                                );
-                            })}
+                    ) : visibleBuckets.length === 0 ? (
+                        <section className="replica-card grid min-h-72 place-items-center p-12 text-center">
+                            <div>
+                                <span className="card-kicker">Priority View</span>
+                                <p className="mb-0 mt-3 text-lg font-semibold text-[#fff7ed]">
+                                    No active priority tasks right now.
+                                </p>
+                            </div>
                         </section>
+                    ) : (
+                        <>
+                            <section
+                                aria-label="Priority task buckets"
+                                className="grid gap-3 xl:grid-cols-2"
+                            >
+                                {visibleBuckets.map((bucket) => {
+                                    const tasksInBucket = bucketTasks[bucket.id];
+                                    return (
+                                        <div
+                                            key={bucket.id}
+                                            className="overflow-hidden rounded-[11px] border border-white/10 bg-[#160e0be6] shadow-[0_12px_26px_rgba(12,6,4,0.22)]"
+                                        >
+                                            <div className="border-b border-white/10 bg-[#0f0907]/70 px-5 py-4">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <h2 className="mb-0 text-lg font-semibold text-[#fff7ed]">
+                                                            {bucket.title}
+                                                        </h2>
+                                                        <p className="mb-0 mt-1 text-sm text-[#b9a99d]">
+                                                            {tasksInBucket.length}{' '}
+                                                            {tasksInBucket.length === 1
+                                                                ? 'task'
+                                                                : 'tasks'}
+                                                        </p>
+                                                    </div>
+                                                    <span
+                                                        className={`h-2.5 w-2.5 rounded-full ${bucket.accent} shadow-[0_0_18px_rgba(251,191,36,0.24)]`}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-3 p-4">
+                                                {tasksInBucket.length === 0 ? (
+                                                    <div className="rounded-[10px] border border-dashed border-white/10 bg-white/[0.04] p-6 text-center text-sm font-medium text-[#d8c8bb]">
+                                                        {bucket.emptyText}
+                                                    </div>
+                                                ) : (
+                                                    tasksInBucket.map((task) => {
+                                                        const moduleInfo = getModule(
+                                                            modules,
+                                                            task.module_id
+                                                        );
+                                                        const deadlineLabel = task.deadline
+                                                            ? `${formatDate(
+                                                                  task.deadline
+                                                              )} at ${formatTime(
+                                                                  task.deadline
+                                                              )}`
+                                                            : 'No deadline';
+                                                        return (
+                                                            <article
+                                                                key={task.id}
+                                                                className="rounded-[10px] border border-white/10 bg-[#120b08]/80 p-4 shadow-[0_10px_22px_rgba(12,6,4,0.18)]"
+                                                            >
+                                                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                                                    <div className="min-w-0">
+                                                                        <h3 className="mb-0 text-base font-semibold text-[#fff7ed]">
+                                                                            {task.title}
+                                                                        </h3>
+                                                                        <p className="mb-0 mt-1 text-sm text-[#b9a99d]">
+                                                                            {moduleInfo
+                                                                                ? `${moduleInfo.module_code} - ${moduleInfo.module_name}`
+                                                                                : 'No module assigned'}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        <span
+                                                                            className={`rounded-full border px-3 py-1 text-xs font-semibold ${getPriorityBadgeClass(
+                                                                                task.priority
+                                                                            )}`}
+                                                                        >
+                                                                            {getPriorityLabel(
+                                                                                task.priority
+                                                                            )}
+                                                                        </span>
+                                                                        <span
+                                                                            className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusBadgeClass(
+                                                                                task.status
+                                                                            )}`}
+                                                                        >
+                                                                            {getStatusLabel(
+                                                                                task.status
+                                                                            )}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="mt-4 flex flex-wrap gap-2 text-sm text-[#d8c8bb]">
+                                                                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
+                                                                        {deadlineLabel}
+                                                                    </span>
+                                                                    {task.estimated_minutes && (
+                                                                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
+                                                                            {
+                                                                                task.estimated_minutes
+                                                                            }{' '}
+                                                                            min
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+
+                                                                <div className="mt-4 flex flex-wrap gap-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            handleUpdateTaskStatus(
+                                                                                task.id,
+                                                                                'in_progress'
+                                                                            )
+                                                                        }
+                                                                        className="rounded-full bg-white/10 px-4 py-2 text-xs font-semibold text-[#fff7ed] transition hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-amber-200/35"
+                                                                    >
+                                                                        {task.status ===
+                                                                        'in_progress'
+                                                                            ? 'Resume'
+                                                                            : 'Start'}
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            handleUpdateTaskStatus(
+                                                                                task.id,
+                                                                                COMPLETED_STATUS
+                                                                            )
+                                                                        }
+                                                                        className="rounded-full bg-emerald-500/15 px-4 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-500/25 focus:outline-none focus:ring-2 focus:ring-emerald-200/35"
+                                                                    >
+                                                                        Complete
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            startEdit(task)
+                                                                        }
+                                                                        className="rounded-full bg-amber-300/15 px-4 py-2 text-xs font-semibold text-amber-100 transition hover:bg-amber-300/25 focus:outline-none focus:ring-2 focus:ring-amber-200/35"
+                                                                    >
+                                                                        Edit
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            handleDeleteTask(
+                                                                                task.id
+                                                                            )
+                                                                        }
+                                                                        className="rounded-full bg-rose-500/15 px-4 py-2 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/25 focus:outline-none focus:ring-2 focus:ring-rose-200/35"
+                                                                    >
+                                                                        Delete
+                                                                    </button>
+                                                                </div>
+                                                            </article>
+                                                        );
+                                                    })
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </section>
+
+                            {laterHiddenCount > 0 && (
+                                <div className="mt-3 rounded-[11px] border border-white/10 bg-[#160e0be6] px-5 py-4 text-sm font-medium text-[#b9a99d] shadow-[0_12px_26px_rgba(12,6,4,0.22)]">
+                                    {laterHiddenCount}{' '}
+                                    {laterHiddenCount === 1
+                                        ? 'later task hidden'
+                                        : 'later tasks hidden'}
+                                </div>
+                            )}
+                        </>
                     )}
                 </main>
             </div>
