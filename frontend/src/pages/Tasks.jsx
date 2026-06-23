@@ -185,11 +185,14 @@ export const Tasks = () => {
     const [guidedDurationError, setGuidedDurationError] = useState('');
     const [showGuidedForm, setShowGuidedForm] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
+    const [toastAction, setToastAction] = useState(null);
+    const [toastDuration, setToastDuration] = useState(2600);
     const [showToast, setShowToast] = useState(false);
     const [activeTaskView, setActiveTaskView] = useState(null);
     const [showCompletedTasks, setShowCompletedTasks] = useState(true);
     const [activeView, setActiveView] = useState(TASK_BOARD_VIEWS.priority);
     const [visiblePriorityBuckets, setVisiblePriorityBuckets] = useState([]);
+    const [undoCompleteTask, setUndoCompleteTask] = useState(null);
 
     const resetTaskForm = () => setFormData(EMPTY_TASK_FORM);
     const resetGuidedForm = () => {
@@ -219,9 +222,13 @@ export const Tasks = () => {
 
     useEffect(() => {
         if (!showToast) return undefined;
-        const timer = setTimeout(() => setShowToast(false), 2600);
+        const timer = setTimeout(() => {
+            setShowToast(false);
+            setToastAction(null);
+            setUndoCompleteTask(null);
+        }, toastDuration);
         return () => clearTimeout(timer);
-    }, [showToast]);
+    }, [showToast, toastDuration]);
 
     useEffect(() => {
         if (loading) return;
@@ -238,8 +245,15 @@ export const Tasks = () => {
         ]);
     }, [loading, tasks]);
 
-    const showSuccessToast = (msg) => {
+    const hideToast = () => {
+        setShowToast(false);
+        setToastAction(null);
+    };
+
+    const showSuccessToast = (msg, action = null, duration = 2600) => {
         setToastMessage(msg);
+        setToastAction(action);
+        setToastDuration(duration);
         setShowToast(true);
     };
 
@@ -306,6 +320,48 @@ export const Tasks = () => {
             loadTasksAndModules();
         } catch (err) {
             setError(err.response?.data?.error || 'Status update failed');
+        }
+    };
+
+    const handleCompleteTask = async (task) => {
+        const previousStatus = task.status;
+
+        try {
+            await tasksAPI.updateTask(task.id, { status: COMPLETED_STATUS });
+            setTasks((currentTasks) =>
+                currentTasks.map((currentTask) =>
+                    currentTask.id === task.id
+                        ? { ...currentTask, status: COMPLETED_STATUS }
+                        : currentTask
+                )
+            );
+            setUndoCompleteTask({ taskId: task.id, previousStatus });
+            showSuccessToast('Task marked complete.', { label: 'Undo' }, 4500);
+            loadTasksAndModules();
+        } catch (err) {
+            setError(err.response?.data?.error || 'Status update failed');
+        }
+    };
+
+    const handleUndoComplete = async () => {
+        if (!undoCompleteTask) return;
+
+        const { taskId, previousStatus } = undoCompleteTask;
+        hideToast();
+        setUndoCompleteTask(null);
+
+        try {
+            await tasksAPI.updateTask(taskId, { status: previousStatus });
+            setTasks((currentTasks) =>
+                currentTasks.map((currentTask) =>
+                    currentTask.id === taskId
+                        ? { ...currentTask, status: previousStatus }
+                        : currentTask
+                )
+            );
+            loadTasksAndModules();
+        } catch (err) {
+            setError(err.response?.data?.error || 'Undo failed');
         }
     };
 
@@ -443,7 +499,13 @@ export const Tasks = () => {
                         })}
                     </section>
 
-                    <Toast message={showToast ? toastMessage : ''} />
+                    <Toast
+                        message={showToast ? toastMessage : ''}
+                        actionLabel={toastAction?.label}
+                        onAction={
+                            toastAction?.label === 'Undo' ? handleUndoComplete : null
+                        }
+                    />
 
                     {error && (
                         <div className="replica-error" role="alert">
@@ -657,9 +719,8 @@ export const Tasks = () => {
                                                                     <button
                                                                         type="button"
                                                                         onClick={() =>
-                                                                            handleUpdateTaskStatus(
-                                                                                task.id,
-                                                                                COMPLETED_STATUS
+                                                                            handleCompleteTask(
+                                                                                task
                                                                             )
                                                                         }
                                                                         className="rounded-full bg-emerald-500/15 px-4 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-500/25 focus:outline-none focus:ring-2 focus:ring-emerald-200/35"
