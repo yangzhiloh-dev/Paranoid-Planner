@@ -28,6 +28,7 @@ const TASK_BOARD_VIEWS = {
     priority: 'priority',
     module: 'module',
 };
+const UNASSIGNED_MODULE_ID = 'unassigned';
 const PRIORITY_BUCKETS = [
     {
         id: 'overdue',
@@ -144,6 +145,50 @@ const buildPriorityBuckets = (tasks, now = new Date()) => {
     return { bucketTasks, laterHiddenCount };
 };
 
+const buildModuleSections = (tasks, modules) => {
+    const sectionsByModule = new Map();
+
+    tasks.filter(isIncompleteTask).forEach((task) => {
+        const moduleInfo = getModule(modules, task.module_id);
+        const sectionId = moduleInfo?.id ?? task.module_id ?? UNASSIGNED_MODULE_ID;
+
+        if (!sectionsByModule.has(sectionId)) {
+            sectionsByModule.set(sectionId, {
+                id: String(sectionId),
+                moduleCode: moduleInfo?.module_code || 'No module',
+                moduleName: moduleInfo?.module_name || '',
+                tasks: [],
+            });
+        }
+
+        sectionsByModule.get(sectionId).tasks.push(task);
+    });
+
+    return Array.from(sectionsByModule.values())
+        .map((section) => {
+            const sortedTasks = [...section.tasks].sort(sortTasksByDeadlineAndPriority);
+            const nearestDeadline = sortedTasks.find((task) =>
+                getTaskDeadlineDate(task)
+            )?.deadline;
+
+            return {
+                ...section,
+                tasks: sortedTasks,
+                activeTaskCount: sortedTasks.length,
+                highPriorityCount: sortedTasks.filter(
+                    (task) => Number(task.priority) >= 5
+                ).length,
+                nearestDeadline,
+            };
+        })
+        .sort((first, second) =>
+            first.moduleCode.localeCompare(second.moduleCode, undefined, {
+                numeric: true,
+                sensitivity: 'base',
+            })
+        );
+};
+
 const getStatusLabel = (status) => {
     if (status === 'in_progress') return 'In progress';
     if (status === COMPLETED_STATUS) return 'Completed';
@@ -174,6 +219,11 @@ const getPriorityBadgeClass = (priority) => {
     return 'border-white/10 bg-white/[0.08] text-[#d8c8bb]';
 };
 
+const getDeadlineLabel = (task) =>
+    task.deadline
+        ? `${formatDate(task.deadline)} at ${formatTime(task.deadline)}`
+        : 'No deadline';
+
 export const Tasks = () => {
     const [tasks, setTasks] = useState([]);
     const [modules, setModules] = useState([]);
@@ -193,6 +243,7 @@ export const Tasks = () => {
     const [activeView, setActiveView] = useState(TASK_BOARD_VIEWS.priority);
     const [visiblePriorityBuckets, setVisiblePriorityBuckets] = useState([]);
     const [undoCompleteTask, setUndoCompleteTask] = useState(null);
+    const [collapsedModuleSections, setCollapsedModuleSections] = useState([]);
 
     const resetTaskForm = () => setFormData(EMPTY_TASK_FORM);
     const resetGuidedForm = () => {
@@ -440,6 +491,98 @@ export const Tasks = () => {
             bucketTasks[bucket.id].length > 0 ||
             visiblePriorityBuckets.includes(bucket.id)
     );
+    const moduleSections = buildModuleSections(tasks, modules);
+
+    const toggleModuleSection = (sectionId) => {
+        setCollapsedModuleSections((current) =>
+            current.includes(sectionId)
+                ? current.filter((id) => id !== sectionId)
+                : [...current, sectionId]
+        );
+    };
+
+    const renderTaskCard = (task) => {
+        const moduleInfo = getModule(modules, task.module_id);
+        const deadlineLabel = getDeadlineLabel(task);
+
+        return (
+            <article
+                key={task.id}
+                className="rounded-[10px] border border-white/10 bg-[#120b08]/80 p-4 shadow-[0_10px_22px_rgba(12,6,4,0.18)]"
+            >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                        <h3 className="mb-0 text-base font-semibold text-[#fff7ed]">
+                            {task.title}
+                        </h3>
+                        <p className="mb-0 mt-1 text-sm text-[#b9a99d]">
+                            {moduleInfo
+                                ? `${moduleInfo.module_code} - ${moduleInfo.module_name}`
+                                : 'No module assigned'}
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        <span
+                            className={`rounded-full border px-3 py-1 text-xs font-semibold ${getPriorityBadgeClass(
+                                task.priority
+                            )}`}
+                        >
+                            {getPriorityLabel(task.priority)}
+                        </span>
+                        <span
+                            className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusBadgeClass(
+                                task.status
+                            )}`}
+                        >
+                            {getStatusLabel(task.status)}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2 text-sm text-[#d8c8bb]">
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
+                        {deadlineLabel}
+                    </span>
+                    {task.estimated_minutes && (
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
+                            {task.estimated_minutes} min
+                        </span>
+                    )}
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        onClick={() => handleUpdateTaskStatus(task.id, 'in_progress')}
+                        className="rounded-full bg-white/10 px-4 py-2 text-xs font-semibold text-[#fff7ed] transition hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-amber-200/35"
+                    >
+                        {task.status === 'in_progress' ? 'Resume' : 'Start'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleCompleteTask(task)}
+                        className="rounded-full bg-emerald-500/15 px-4 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-500/25 focus:outline-none focus:ring-2 focus:ring-emerald-200/35"
+                    >
+                        Complete
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => startEdit(task)}
+                        className="rounded-full bg-amber-300/15 px-4 py-2 text-xs font-semibold text-amber-100 transition hover:bg-amber-300/25 focus:outline-none focus:ring-2 focus:ring-amber-200/35"
+                    >
+                        Edit
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleDeleteTask(task.id)}
+                        className="rounded-full bg-rose-500/15 px-4 py-2 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/25 focus:outline-none focus:ring-2 focus:ring-rose-200/35"
+                    >
+                        Delete
+                    </button>
+                </div>
+            </article>
+        );
+    };
 
     return (
         <div className="replica-stage">
@@ -568,16 +711,7 @@ export const Tasks = () => {
                         </div>
                     </div>
 
-                    {activeView === TASK_BOARD_VIEWS.module ? (
-                        <section className="replica-card grid min-h-72 place-items-center p-12 text-center">
-                            <div>
-                                <span className="card-kicker">Module View</span>
-                                <p className="mb-0 mt-3 text-lg font-semibold text-[#fff7ed]">
-                                    Module View coming next
-                                </p>
-                            </div>
-                        </section>
-                    ) : loading ? (
+                    {loading ? (
                         <section
                             className="replica-card grid min-h-72 place-items-center p-12 text-center"
                             aria-live="polite"
@@ -589,6 +723,97 @@ export const Tasks = () => {
                                 </p>
                             </div>
                         </section>
+                    ) : activeView === TASK_BOARD_VIEWS.module ? (
+                        moduleSections.length === 0 ? (
+                            <section className="replica-card grid min-h-72 place-items-center p-12 text-center">
+                                <div>
+                                    <span className="card-kicker">Module View</span>
+                                    <p className="mb-0 mt-3 text-lg font-semibold text-[#fff7ed]">
+                                        No active module tasks yet.
+                                    </p>
+                                </div>
+                            </section>
+                        ) : (
+                            <section
+                                aria-label="Module task sections"
+                                className="space-y-3"
+                            >
+                                {moduleSections.map((section) => {
+                                    const isCollapsed = collapsedModuleSections.includes(
+                                        section.id
+                                    );
+                                    const nearestDeadlineLabel = section.nearestDeadline
+                                        ? `${formatDate(
+                                              section.nearestDeadline
+                                          )} at ${formatTime(
+                                              section.nearestDeadline
+                                          )}`
+                                        : null;
+
+                                    return (
+                                        <div
+                                            key={section.id}
+                                            className="overflow-hidden rounded-[11px] border border-white/10 bg-[#160e0be6] shadow-[0_12px_26px_rgba(12,6,4,0.22)]"
+                                        >
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    toggleModuleSection(section.id)
+                                                }
+                                                aria-expanded={!isCollapsed}
+                                                className="flex w-full flex-col gap-4 border-b border-white/10 bg-[#0f0907]/70 px-5 py-4 text-left transition hover:bg-[#140c09]/80 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-200/35 sm:flex-row sm:items-center sm:justify-between"
+                                            >
+                                                <div className="min-w-0">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <h2 className="mb-0 text-lg font-semibold text-[#fff7ed]">
+                                                            {section.moduleCode}
+                                                        </h2>
+                                                        {section.moduleName && (
+                                                            <span className="text-sm font-medium text-[#b9a99d]">
+                                                                {section.moduleName}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-[#d8c8bb]">
+                                                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
+                                                            {section.activeTaskCount}{' '}
+                                                            {section.activeTaskCount === 1
+                                                                ? 'active task'
+                                                                : 'active tasks'}
+                                                        </span>
+                                                        {section.highPriorityCount > 0 && (
+                                                            <span className="rounded-full border border-rose-300/25 bg-rose-300/15 px-3 py-1 text-rose-100">
+                                                                {
+                                                                    section.highPriorityCount
+                                                                }{' '}
+                                                                high priority
+                                                            </span>
+                                                        )}
+                                                        {nearestDeadlineLabel && (
+                                                            <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-amber-100">
+                                                                Nearest{' '}
+                                                                {nearestDeadlineLabel}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <span className="self-start rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-semibold text-[#b9a99d] sm:self-center">
+                                                    {isCollapsed ? 'Expand' : 'Collapse'}
+                                                </span>
+                                            </button>
+
+                                            {!isCollapsed && (
+                                                <div className="space-y-3 p-4">
+                                                    {section.tasks.map((task) =>
+                                                        renderTaskCard(task)
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </section>
+                        )
                     ) : visibleBuckets.length === 0 ? (
                         <section className="replica-card grid min-h-72 place-items-center p-12 text-center">
                             <div>
@@ -636,121 +861,9 @@ export const Tasks = () => {
                                                         {bucket.emptyText}
                                                     </div>
                                                 ) : (
-                                                    tasksInBucket.map((task) => {
-                                                        const moduleInfo = getModule(
-                                                            modules,
-                                                            task.module_id
-                                                        );
-                                                        const deadlineLabel = task.deadline
-                                                            ? `${formatDate(
-                                                                  task.deadline
-                                                              )} at ${formatTime(
-                                                                  task.deadline
-                                                              )}`
-                                                            : 'No deadline';
-                                                        return (
-                                                            <article
-                                                                key={task.id}
-                                                                className="rounded-[10px] border border-white/10 bg-[#120b08]/80 p-4 shadow-[0_10px_22px_rgba(12,6,4,0.18)]"
-                                                            >
-                                                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                                                    <div className="min-w-0">
-                                                                        <h3 className="mb-0 text-base font-semibold text-[#fff7ed]">
-                                                                            {task.title}
-                                                                        </h3>
-                                                                        <p className="mb-0 mt-1 text-sm text-[#b9a99d]">
-                                                                            {moduleInfo
-                                                                                ? `${moduleInfo.module_code} - ${moduleInfo.module_name}`
-                                                                                : 'No module assigned'}
-                                                                        </p>
-                                                                    </div>
-                                                                    <div className="flex flex-wrap gap-2">
-                                                                        <span
-                                                                            className={`rounded-full border px-3 py-1 text-xs font-semibold ${getPriorityBadgeClass(
-                                                                                task.priority
-                                                                            )}`}
-                                                                        >
-                                                                            {getPriorityLabel(
-                                                                                task.priority
-                                                                            )}
-                                                                        </span>
-                                                                        <span
-                                                                            className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusBadgeClass(
-                                                                                task.status
-                                                                            )}`}
-                                                                        >
-                                                                            {getStatusLabel(
-                                                                                task.status
-                                                                            )}
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className="mt-4 flex flex-wrap gap-2 text-sm text-[#d8c8bb]">
-                                                                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
-                                                                        {deadlineLabel}
-                                                                    </span>
-                                                                    {task.estimated_minutes && (
-                                                                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
-                                                                            {
-                                                                                task.estimated_minutes
-                                                                            }{' '}
-                                                                            min
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-
-                                                                <div className="mt-4 flex flex-wrap gap-2">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            handleUpdateTaskStatus(
-                                                                                task.id,
-                                                                                'in_progress'
-                                                                            )
-                                                                        }
-                                                                        className="rounded-full bg-white/10 px-4 py-2 text-xs font-semibold text-[#fff7ed] transition hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-amber-200/35"
-                                                                    >
-                                                                        {task.status ===
-                                                                        'in_progress'
-                                                                            ? 'Resume'
-                                                                            : 'Start'}
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            handleCompleteTask(
-                                                                                task
-                                                                            )
-                                                                        }
-                                                                        className="rounded-full bg-emerald-500/15 px-4 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-500/25 focus:outline-none focus:ring-2 focus:ring-emerald-200/35"
-                                                                    >
-                                                                        Complete
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            startEdit(task)
-                                                                        }
-                                                                        className="rounded-full bg-amber-300/15 px-4 py-2 text-xs font-semibold text-amber-100 transition hover:bg-amber-300/25 focus:outline-none focus:ring-2 focus:ring-amber-200/35"
-                                                                    >
-                                                                        Edit
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            handleDeleteTask(
-                                                                                task.id
-                                                                            )
-                                                                        }
-                                                                        className="rounded-full bg-rose-500/15 px-4 py-2 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/25 focus:outline-none focus:ring-2 focus:ring-rose-200/35"
-                                                                    >
-                                                                        Delete
-                                                                    </button>
-                                                                </div>
-                                                            </article>
-                                                        );
-                                                    })
+                                                    tasksInBucket.map((task) =>
+                                                        renderTaskCard(task)
+                                                    )
                                                 )}
                                             </div>
                                         </div>
