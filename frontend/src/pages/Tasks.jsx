@@ -239,7 +239,7 @@ export const Tasks = () => {
     const [toastDuration, setToastDuration] = useState(2600);
     const [showToast, setShowToast] = useState(false);
     const [activeTaskView, setActiveTaskView] = useState(null);
-    const [showCompletedTasks, setShowCompletedTasks] = useState(true);
+    const [showCompletedTasks, setShowCompletedTasks] = useState(false);
     const [activeView, setActiveView] = useState(TASK_BOARD_VIEWS.priority);
     const [visiblePriorityBuckets, setVisiblePriorityBuckets] = useState([]);
     const [undoCompleteTask, setUndoCompleteTask] = useState(null);
@@ -492,6 +492,10 @@ export const Tasks = () => {
             visiblePriorityBuckets.includes(bucket.id)
     );
     const moduleSections = buildModuleSections(tasks, modules);
+    const completedTasks = tasks
+        .filter(isCompletedTask)
+        .sort(sortTasksByDeadlineAndPriority);
+    const completedTaskCount = completedTasks.length;
 
     const toggleModuleSection = (sectionId) => {
         setCollapsedModuleSections((current) =>
@@ -584,6 +588,47 @@ export const Tasks = () => {
         );
     };
 
+    const renderCompletedTaskItem = (task) => {
+        const moduleInfo = getModule(modules, task.module_id);
+
+        return (
+            <div
+                key={task.id}
+                className="flex flex-col gap-3 rounded-[10px] border border-white/10 bg-[#120b08]/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+                <div className="min-w-0">
+                    <h3 className="mb-0 text-sm font-semibold text-[#fff7ed]">
+                        {task.title}
+                    </h3>
+                    <div className="mt-1 flex flex-wrap gap-2 text-xs text-[#b9a99d]">
+                        <span>
+                            {moduleInfo
+                                ? `${moduleInfo.module_code} - ${moduleInfo.module_name}`
+                                : 'No module assigned'}
+                        </span>
+                        {task.deadline && <span>{getDeadlineLabel(task)}</span>}
+                    </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                    <span
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusBadgeClass(
+                            task.status
+                        )}`}
+                    >
+                        {getStatusLabel(task.status)}
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => handleUpdateTaskStatus(task.id, 'pending')}
+                        className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-[#fff7ed] transition hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-amber-200/35"
+                    >
+                        Reopen
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="replica-stage">
             <div className="replica-shell">
@@ -610,6 +655,10 @@ export const Tasks = () => {
                     >
                         {taskSummaryCards.map((card) => {
                             const isActive = activeTaskView === card.id;
+                            const isCardActive =
+                                card.id === TASK_VIEW_FILTERS.completed
+                                    ? showCompletedTasks
+                                    : isActive;
                             return (
                                 <button
                                     key={card.id}
@@ -617,11 +666,11 @@ export const Tasks = () => {
                                     onClick={card.onClick}
                                     aria-pressed={
                                         card.id === TASK_VIEW_FILTERS.completed
-                                            ? !showCompletedTasks
+                                            ? showCompletedTasks
                                             : isActive
                                     }
                                     className={`group rounded-[11px] border p-5 text-left shadow-[0_12px_26px_rgba(12,6,4,0.22)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-200/30 focus:outline-none focus:ring-2 focus:ring-amber-200/35 ${
-                                        isActive
+                                        isCardActive
                                             ? 'border-amber-200/35 bg-[#1d120ee8]'
                                             : 'border-white/10 bg-[#160e0be6]'
                                     }`}
@@ -880,6 +929,47 @@ export const Tasks = () => {
                                 </div>
                             )}
                         </>
+                    )}
+
+                    {!loading && (
+                        <section className="mt-3 overflow-hidden rounded-[11px] border border-white/10 bg-[#160e0be6] shadow-[0_12px_26px_rgba(12,6,4,0.22)]">
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setShowCompletedTasks((current) => !current)
+                                }
+                                aria-expanded={showCompletedTasks}
+                                className="flex w-full flex-col gap-3 bg-[#0f0907]/70 px-5 py-4 text-left transition hover:bg-[#140c09]/80 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-200/35 sm:flex-row sm:items-center sm:justify-between"
+                            >
+                                <div>
+                                    <span className="card-kicker">
+                                        Completed tasks
+                                    </span>
+                                    <p className="mb-0 mt-1 text-sm font-semibold text-[#fff7ed]">
+                                        {showCompletedTasks
+                                            ? `Hide ${completedTaskCount} completed ${completedTaskCount === 1 ? 'task' : 'tasks'}`
+                                            : `Show ${completedTaskCount} completed ${completedTaskCount === 1 ? 'task' : 'tasks'}`}
+                                    </p>
+                                </div>
+                                <span className="self-start rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs font-semibold text-emerald-100 sm:self-center">
+                                    {completedTaskCount}
+                                </span>
+                            </button>
+
+                            {showCompletedTasks && (
+                                <div className="space-y-2 p-4">
+                                    {completedTasks.length === 0 ? (
+                                        <div className="rounded-[10px] border border-dashed border-white/10 bg-white/[0.04] p-5 text-center text-sm font-medium text-[#d8c8bb]">
+                                            No completed tasks yet.
+                                        </div>
+                                    ) : (
+                                        completedTasks.map((task) =>
+                                            renderCompletedTaskItem(task)
+                                        )
+                                    )}
+                                </div>
+                            )}
+                        </section>
                     )}
                 </main>
             </div>
