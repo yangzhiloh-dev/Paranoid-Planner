@@ -1,12 +1,10 @@
-// ParanoidPlanner Backend Server
 // Main Express application entry point
-
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
-// DEBUGGING: Log that dotenv is loaded
+// checks to ensure the server is running properly
 console.log('\n🔍 [SERVER] Starting ParanoidPlanner backend...');
-console.log('📁 .env file location:', path.resolve(__dirname, '.env'));
+console.log('.env file location:', path.resolve(__dirname, '.env'));
 console.log('✓ NODE_ENV loaded:', !!process.env.NODE_ENV);
 console.log('✓ PORT loaded:', !!process.env.PORT);
 
@@ -15,39 +13,41 @@ const cors = require('cors');
 
 const app = express();
 
-// Configuring middleware
+// Configure middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// CSV imports arrive as raw text; JSON imports continue through express.json().
+// CSV imports arrive as raw text strings and JSON imports continue through express.json().
 app.use('/api/modules/import', express.text({ type: ['text/csv', 'application/csv'] }));
 
-// Importing database module
+// Importing database 
 const pool = require('./config/db');
 const runMigrations = require('./config/runMigrations');
 
-// Import routes
+// Import the needed routes for each page and each route handles Auth n authorisaation
 const authRoutes = require('./routes/authRoutes');
 const moduleRoutes = require('./routes/moduleRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
+const productivityRoutes = require('./routes/productivityRoutes');
 
-// Register routes with base paths
+// Register routes through these routes 
 app.use('/api/auth', authRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/schedule', scheduleRoutes);
+app.use('/api/productivity', productivityRoutes);
 
-// Health check endpoint
+// check that server is running
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
-// Error handling middleware
+// Middleware to handle errors encountered
 app.use((err, req, res, next) => {
   console.error('Error:', err.message);
 
-  // Default to 500 server error
+  // Default gateway for  500 status code
   const status = err.status || 500;
   const message = err.message || 'Internal Server Error';
 
@@ -57,7 +57,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler for undefined routes
+// handle 404 errors
 app.use((req, res) => {
   res.status(404).json({
     error: 'Route not found',
@@ -66,13 +66,13 @@ app.use((req, res) => {
   });
 });
 
-// Start server
+// instructions to start the server
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 const startServer = async () => {
   try {
-    // Ensure all tables and import columns exist before accepting API traffic.
+    // simple logging to confirm server is active
     await runMigrations(pool);
     app.listen(PORT, () => {
       console.log(`\n ParanoidPlanner backend server started`);

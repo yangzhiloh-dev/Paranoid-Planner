@@ -1,9 +1,18 @@
-// Task Controller
-// Handles CRUD operations for tasks
-
 const pool = require('../config/db');
+const {
+  awardTaskCompletion,
+  reverseTaskCompletion,
+} = require('../services/pointsService');
 
-// Get all tasks for the current user
+/* Get all tasks for the current user
+ *
+ * Query params:
+ *  - module_id (optional): filter tasks by module id
+ *  - status (optional): filter by task status
+ *
+ * Return:
+ *  - JSON { tasks: [...] } where each task includes joined module fields (module_code, module_name, color)
+ */
 const getTasks = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -73,7 +82,7 @@ const createTask = async (req, res) => {
       return res.status(400).json({ error: 'Description must be 1000 characters or less' });
     }
 
-    // Validate estimated_minutes (optional)
+    
     if (
       estimated_minutes !== undefined &&
       estimated_minutes !== null &&
@@ -86,14 +95,14 @@ const createTask = async (req, res) => {
       }
     }
 
-    // Validate priority
+
     if (priority !== undefined) {
       if (typeof priority !== 'number' || priority < 1 || priority > 5) {
         return res.status(400).json({ error: 'Priority must be between 1 and 5' });
       }
     }
 
-    // Verify module belongs to user
+   //self-explanatory: check if module exists and belongs to user
     const moduleCheck = await pool.query(
       'SELECT id FROM modules WHERE id = $1 AND user_id = $2',
       [module_id, userId]
@@ -103,7 +112,7 @@ const createTask = async (req, res) => {
       return res.status(404).json({ error: 'Module not found' });
     }
 
-    // Validate time format if provided (HH:MM:SS)
+    // Sanitising time inputs into preferred format (HH:MM or HH:MM:SS)
     const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/;
     if (preferred_start_time && !timeRegex.test(preferred_start_time)) {
       return res.status(400).json({ error: 'Preferred start time must be in HH:MM or HH:MM:SS format' });
@@ -118,7 +127,7 @@ const createTask = async (req, res) => {
         ? null
         : Number(estimated_minutes);
 
-    // Insert new task
+    
     const result = await pool.query(
       `INSERT INTO tasks
         (user_id, module_id, title, description, deadline, estimated_minutes, priority, preferred_start_time, preferred_end_time)
@@ -139,7 +148,22 @@ const createTask = async (req, res) => {
   }
 };
 
-// Update a task
+/* Updating tasks
+ *
+ * Path param:
+ *  -  update by id
+ *
+ * Request body may include any updatable fields (same validation as create).
+ *
+ * Important behavior:
+ *  - Ensure task belongs to the user.
+ *  - Affects a DB  to update the task and record point events.
+ *  - If status transitions from non-completed -> completed: call awardTaskCompletion
+ *  - If status transitions from completed -> non-completed: call reverseTaskCompletion
+ *
+ * Returns:
+ *  - JSON { message, task, productivity: { awarded, reversed } }
+ */
 const updateTask = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -148,13 +172,15 @@ const updateTask = async (req, res) => {
 
     // Verify task belongs to user
     const taskExists = await pool.query(
-      'SELECT id FROM tasks WHERE id = $1 AND user_id = $2',
+      'SELECT id, status FROM tasks WHERE id = $1 AND user_id = $2',
       [taskId, userId]
     );
 
     if (taskExists.rows.length === 0) {
       return res.status(404).json({ error: 'Task not found' });
     }
+
+    const previousTask = taskExists.rows[0];
 
     // Build dynamic update query
     const updates = [];
@@ -246,25 +272,67 @@ const updateTask = async (req, res) => {
       RETURNING id, user_id, module_id, title, description, deadline, estimated_minutes, priority, status, preferred_start_time, preferred_end_time, created_at, updated_at
     `;
 
-    const result = await pool.query(query, params);
+    const client = await pool.connect();
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Task not found' });
+    try {
+      await client.query('BEGIN');
+
+      const result = await client.query(query, params);
+
+      if (result.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Task not found' });
+      }
+
+      const updatedTask = result.rows[0];
+      let awardedPoints = null;
+      let reversedPoints = [];
+
+      if (previousTask.status !== 'completed' && updatedTask.status === 'completed') {
+        awardedPoints = await awardTaskCompletion(client, userId, updatedTask);
+      }
+
+      if (previousTask.status === 'completed' && updatedTask.status !== 'completed') {
+        reversedPoints = await reverseTaskCompletion(
+          client,
+          userId,
+          taskId,
+          'Task moved out of completed'
+        );
+      }
+
+      await client.query('COMMIT');
+
+      res.json({
+        message: 'Task updated successfully',
+        task: updatedTask,
+        productivity: {
+          awarded: awardedPoints,
+          reversed: reversedPoints,
+        },
+      });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
     }
-
-    const updatedTask = result.rows[0];
-
-    res.json({
-      message: 'Task updated successfully',
-      task: updatedTask,
-    });
   } catch (err) {
     console.error('Update task error:', err);
     res.status(500).json({ error: 'Failed to update task' });
   }
 };
 
-// Delete a task
+/* Deleting tasks
+ *
+ * Path param:
+ *  - delete by id
+ *
+ * Behavior:
+ *  - check if task belongs to user
+ *  - edge case: reverse point rewards (if any) and deletes the task.
+ *  - Return summary of reversed productivity events.
+ */
 const deleteTask = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -280,15 +348,37 @@ const deleteTask = async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    // Delete task (cascading delete will handle study sessions)
-    await pool.query(
-      'DELETE FROM tasks WHERE id = $1 AND user_id = $2',
-      [taskId, userId]
-    );
+    const client = await pool.connect();
 
-    res.json({
-      message: 'Task deleted successfully',
-    });
+    try {
+      await client.query('BEGIN');
+
+      const reversedPoints = await reverseTaskCompletion(
+        client,
+        userId,
+        taskId,
+        'Task deleted after completion'
+      );
+
+      await client.query(
+        'DELETE FROM tasks WHERE id = $1 AND user_id = $2',
+        [taskId, userId]
+      );
+
+      await client.query('COMMIT');
+
+      res.json({
+        message: 'Task deleted successfully',
+        productivity: {
+          reversed: reversedPoints,
+        },
+      });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     console.error('Delete task error:', err);
     res.status(500).json({ error: 'Failed to delete task' });
