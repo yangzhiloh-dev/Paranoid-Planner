@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { scheduleAPI } from '../api/api';
+import { scheduleAPI, tasksAPI } from '../api/api';
 import { DashboardSidebar } from '../components/dashboard/DashboardSidebar';
 import PrimaryButton from '../components/PrimaryButton';
 import './Dashboard.css';
@@ -13,6 +13,39 @@ const ACTIVITY_STYLES = {
   TUT: { backgroundColor: '#5b21b6', borderColor: '#8b5cf6', label: 'Tutorial' },
   LAB: { backgroundColor: '#0f766e', borderColor: '#2dd4bf', label: 'Lab' },
 };
+
+const AUTO_SCHEDULE_SIGNATURE_KEY = 'paranoidplanner.scheduleSignature';
+const ACTIVE_TASK_STATUSES = new Set(['pending', 'in_progress']);
+
+const buildTaskSignature = (tasks = []) =>
+  JSON.stringify(
+    tasks
+      .filter((task) => ACTIVE_TASK_STATUSES.has(task.status))
+      .map((task) => ({
+        id: task.id,
+        status: task.status,
+        deadline: task.deadline,
+        priority: task.priority,
+        estimated_minutes: task.estimated_minutes,
+        module_id: task.module_id,
+        updated_at: task.updated_at,
+      }))
+      .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+  );
+
+const buildLessonSignature = (lessons = []) =>
+  JSON.stringify(
+    lessons
+      .map((lesson) => ({
+        id: lesson.id,
+        module_id: lesson.module_id,
+        day_of_week: lesson.day_of_week,
+        start_time: lesson.start_time,
+        end_time: lesson.end_time,
+        activity_type: lesson.activity_type,
+      }))
+      .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+  );
 
 const getAssignmentStyle = (priority) => {
   const value = Number(priority);
@@ -131,6 +164,9 @@ export const Schedule = () => {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const autoGenerationRef = useRef({ inFlight: false, signature: '' });
+  const [autoUpdating, setAutoUpdating] = useState(false);
+  const [autoUpdateError, setAutoUpdateError] = useState('');
 
   const fetchSchedule = useCallback(async () => {
     try {
@@ -139,20 +175,69 @@ export const Schedule = () => {
       const response = await scheduleAPI.getSchedule();
       const data = response.data || {};
 
-      setLessons(Array.isArray(data.lessons) ? data.lessons : []);
-      setSessions(Array.isArray(data.sessions) ? data.sessions : []);
+      const nextLessons = Array.isArray(data.lessons) ? data.lessons : [];
+      const nextSessions = Array.isArray(data.sessions) ? data.sessions : [];
+
+      setLessons(nextLessons);
+      setSessions(nextSessions);
+
+      return { lessons: nextLessons, sessions: nextSessions };
     } catch (err) {
       setLessons([]);
       setSessions([]);
       setError(err.response?.data?.error || 'Failed to fetch the schedule. Please try again.');
+      return { lessons: [], sessions: [] };
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchSchedule();
+  const loadScheduleWithAutoUpdate = useCallback(async () => {
+    const scheduleData = await fetchSchedule();
+
+    try {
+      const taskResponse = await tasksAPI.getTasks();
+      const allTasks = taskResponse.data?.tasks || [];
+      const activeTasks = allTasks.filter((task) => ACTIVE_TASK_STATUSES.has(task.status));
+
+      if (!activeTasks.length) return;
+
+      const taskSignature = buildTaskSignature(allTasks);
+      const lessonSignature = buildLessonSignature(scheduleData.lessons);
+      const currentSignature = `${taskSignature}:${lessonSignature}`;
+      const storedSignature = localStorage.getItem(AUTO_SCHEDULE_SIGNATURE_KEY);
+      const hasGeneratedSessions = scheduleData.sessions.length > 0;
+
+      const shouldGenerate =
+        !hasGeneratedSessions || storedSignature !== currentSignature;
+
+      if (
+        !shouldGenerate ||
+        autoGenerationRef.current.inFlight ||
+        autoGenerationRef.current.signature === currentSignature
+      ) {
+        return;
+      }
+
+      autoGenerationRef.current = { inFlight: true, signature: autoGenerationRef.current.signature };
+      setAutoUpdating(true);
+      setAutoUpdateError('');
+
+      await scheduleAPI.generateSchedule();
+      localStorage.setItem(AUTO_SCHEDULE_SIGNATURE_KEY, currentSignature);
+      autoGenerationRef.current.signature = currentSignature;
+      await fetchSchedule();
+    } catch (err) {
+      setAutoUpdateError('Schedule could not update automatically. Try Refresh Schedule.');
+    } finally {
+      autoGenerationRef.current.inFlight = false;
+      setAutoUpdating(false);
+    }
   }, [fetchSchedule]);
+
+  useEffect(() => {
+    loadScheduleWithAutoUpdate();
+  }, [loadScheduleWithAutoUpdate]);
 
   const calendarEvents = useMemo(() => {
     const lessonEvents = lessons.map(lessonToEvent).filter(Boolean);
@@ -168,11 +253,17 @@ export const Schedule = () => {
       setGenerating(true);
       setError('');
       setNotice('');
+      setAutoUpdateError('');
       await scheduleAPI.generateSchedule();
-      await fetchSchedule();
-      setNotice('Schedule generated successfully.');
+      const scheduleData = await fetchSchedule();
+      const taskResponse = await tasksAPI.getTasks();
+      const currentSignature = `${buildTaskSignature(taskResponse.data?.tasks || [])}:${buildLessonSignature(scheduleData.lessons)}`;
+
+      localStorage.setItem(AUTO_SCHEDULE_SIGNATURE_KEY, currentSignature);
+      autoGenerationRef.current.signature = currentSignature;
+      setNotice('Schedule refreshed successfully.');
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to generate the schedule. Please try again.');
+      setError(err.response?.data?.error || 'Failed to refresh the schedule. Please try again.');
     } finally {
       setGenerating(false);
     }
@@ -222,7 +313,7 @@ export const Schedule = () => {
                   Schedule
                 </h1>
                 <p className="mb-0 mt-2 max-w-2xl text-sm text-[#b9a99d]">
-                  Keep fixed classes and generated study sessions together in one weekly plan.
+                  Your weekly plan updates automatically when tasks or lessons change.
                 </p>
               </div>
 
@@ -233,7 +324,7 @@ export const Schedule = () => {
                 disabled={generating}
                 className="w-full shrink-0 px-6 py-3 font-semibold sm:w-auto"
               >
-                {generating ? 'Generating...' : 'Generate Schedule'}
+                {generating ? 'Updating schedule...' : 'Refresh Schedule'}
               </PrimaryButton>
             </div>
           </header>
@@ -241,6 +332,22 @@ export const Schedule = () => {
           {error && (
             <div className="replica-error" role="alert">
               {error}
+            </div>
+          )}
+          {autoUpdating && !error && (
+            <div
+              className="mb-3 rounded-lg border border-amber-300/25 bg-amber-950/30 px-4 py-3 text-sm text-amber-100"
+              role="status"
+            >
+              Updating schedule...
+            </div>
+          )}
+          {autoUpdateError && !error && !autoUpdating && (
+            <div
+              className="mb-3 rounded-lg border border-[#ff744c]/35 bg-[#701f10]/25 px-4 py-3 text-sm font-medium text-[#ffc1ae]"
+              role="alert"
+            >
+              {autoUpdateError}
             </div>
           )}
           {notice && !error && (

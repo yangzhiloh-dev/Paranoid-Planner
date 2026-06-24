@@ -176,7 +176,9 @@ const getSchedule = async (userId, database) => {
         FROM study_sessions ss
         LEFT JOIN tasks t ON ss.task_id = t.id
         LEFT JOIN modules m ON t.module_id = m.id
-        WHERE ss.user_id = $1 AND ss.status != 'cancelled'
+        WHERE ss.user_id = $1
+          AND ss.status != 'cancelled'
+          AND (t.id IS NULL OR t.status NOT IN ('completed', 'cancelled'))
         ORDER BY ss.scheduled_start ASC`,
         [userId]
       ),
