@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import randomColor from 'randomcolor';
 import { FaBookOpen, FaEdit, FaTrash } from 'react-icons/fa';
-import { modulesAPI } from '../api/api';
+import { modulesAPI, scheduleAPI, tasksAPI } from '../api/api';
 import { DashboardSidebar } from '../components/dashboard/DashboardSidebar';
 import PrimaryButton from '../components/PrimaryButton';
 import './Dashboard.css';
@@ -30,6 +30,71 @@ const DAY_OF_WEEK = {
 };
 
 const MODULE_CODE_REGEX = /^[A-Z]{2,4}\d{4}[A-Z]{0,3}$/;
+const COMPLETED_STATUS = 'completed';
+
+const isActiveTask = (task) => task.status !== COMPLETED_STATUS;
+
+const parseTaskDeadline = (deadline) => {
+  if (!deadline) return null;
+
+  const parsedDeadline = new Date(deadline);
+  return Number.isNaN(parsedDeadline.getTime()) ? null : parsedDeadline;
+};
+
+const addDays = (date, days) => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
+
+const getTasksForModule = (tasks, moduleId) =>
+  tasks.filter((task) => String(task.module_id) === String(moduleId));
+
+const getActiveTasksForModule = (tasks, moduleId) =>
+  getTasksForModule(tasks, moduleId).filter(isActiveTask);
+
+const getDueThisWeekCount = (tasks, now = new Date()) => {
+  const weekEnd = addDays(now, 7);
+
+  return tasks.filter((task) => {
+    const deadline = parseTaskDeadline(task.deadline);
+    return Boolean(deadline && deadline >= now && deadline <= weekEnd);
+  }).length;
+};
+
+const getHighPriorityCount = (tasks) =>
+  tasks.filter((task) => Number(task.priority) >= 5).length;
+
+const getNextDeadline = (tasks, now = new Date()) =>
+  tasks
+    .map((task) => parseTaskDeadline(task.deadline))
+    .filter((deadline) => deadline && deadline >= now)
+    .sort((firstDeadline, secondDeadline) => firstDeadline - secondDeadline)[0] || null;
+
+const getLessonCountForModule = (module, lessons) => {
+  if (Array.isArray(lessons)) {
+    return lessons.filter((lesson) => String(lesson.module_id) === String(module.id)).length;
+  }
+
+  if (Array.isArray(module.lessons)) return module.lessons.length;
+
+  return null;
+};
+
+const formatModuleDeadline = (deadline) => {
+  if (!deadline) return null;
+
+  const date = deadline instanceof Date ? deadline : parseTaskDeadline(deadline);
+  if (!date) return null;
+
+  const options = {
+    month: 'short',
+    day: 'numeric',
+    ...(date.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}),
+  };
+
+  return new Intl.DateTimeFormat('en', options).format(date);
+};
 
 const normalizeActivityType = (lessonType) => {
   const type = lessonType.toUpperCase();
@@ -147,48 +212,108 @@ const fetchNusModsModule = async ({ moduleCode, selectedClasses }, semester) => 
   };
 };
 
-const ModuleCard = ({ module, onEdit, onDelete }) => (
-  <article className="replica-card group flex min-h-44 flex-col p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-300/30 sm:p-6">
-    <div className="mb-5 flex items-start justify-between">
-      <div
-        className="h-3.5 w-3.5 rounded-full ring-4 ring-white/5"
-        style={{
-          backgroundColor: module.color,
-          boxShadow: `0 0 18px ${module.color}66`,
-        }}
-        aria-label={`Module color ${module.color}`}
-      />
-      <div className="flex gap-1 opacity-70 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-        <button
-          type="button"
-          onClick={() => onEdit(module)}
-          className="grid h-9 w-9 place-items-center rounded-full border-0 bg-transparent text-[#b9a99d] transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"
-          title="Edit"
-          aria-label={`Edit ${module.module_code}`}
-        >
-          <FaEdit aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          onClick={() => onDelete(module.id)}
-          className="grid h-9 w-9 place-items-center rounded-full border-0 bg-transparent text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-300"
-          title="Delete"
-          aria-label={`Delete ${module.module_code}`}
-        >
-          <FaTrash aria-hidden="true" />
-        </button>
-      </div>
-    </div>
+const ModuleCard = ({ module, taskSummary, lessonCount, onEdit, onDelete }) => {
+  const nextDeadlineLabel = formatModuleDeadline(taskSummary.nextDeadline);
+  const hasActiveTasks = taskSummary.activeCount > 0;
 
-    <span className="card-kicker">Module</span>
-    <h2 className="mb-2 text-xl font-bold tracking-tight text-[#fff7ed]">
-      {module.module_code}
-    </h2>
-    <p className="m-0 text-sm leading-relaxed text-[#b9a99d]">
-      {module.module_name}
-    </p>
-  </article>
-);
+  return (
+    <article className="replica-card group flex min-h-56 flex-col p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-300/30 sm:p-6">
+      <div className="mb-5 flex items-start justify-between">
+        <div
+          className="h-3.5 w-3.5 rounded-full ring-4 ring-white/5"
+          style={{
+            backgroundColor: module.color,
+            boxShadow: `0 0 18px ${module.color}66`,
+          }}
+          aria-label={`Module color ${module.color}`}
+        />
+        <div className="flex gap-1 opacity-70 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          <button
+            type="button"
+            onClick={() => onEdit(module)}
+            className="grid h-9 w-9 place-items-center rounded-full border-0 bg-transparent text-[#b9a99d] transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"
+            title="Edit"
+            aria-label={`Edit ${module.module_code}`}
+          >
+            <FaEdit aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(module.id)}
+            className="grid h-9 w-9 place-items-center rounded-full border-0 bg-transparent text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-300"
+            title="Delete"
+            aria-label={`Delete ${module.module_code}`}
+          >
+            <FaTrash aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+
+      <span className="card-kicker">Module</span>
+      <h2 className="mb-2 text-xl font-bold tracking-tight text-[#fff7ed]">
+        {module.module_code}
+      </h2>
+      <p className="m-0 text-sm leading-relaxed text-[#b9a99d]">
+        {module.module_name}
+      </p>
+
+      <div className="mt-5 space-y-3 border-t border-white/10 pt-4">
+        {hasActiveTasks ? (
+          <>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-[10px] border border-white/10 bg-white/[0.04] px-3 py-2">
+                <span className="block text-base font-bold text-[#fff7ed]">
+                  {taskSummary.activeCount}
+                </span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#b9a99d]">
+                  Active
+                </span>
+              </div>
+              <div className="rounded-[10px] border border-amber-300/20 bg-amber-300/10 px-3 py-2">
+                <span className="block text-base font-bold text-amber-100">
+                  {taskSummary.dueThisWeekCount}
+                </span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#d8c8bb]">
+                  Due week
+                </span>
+              </div>
+              <div className="rounded-[10px] border border-orange-300/20 bg-orange-300/10 px-3 py-2">
+                <span className="block text-base font-bold text-orange-100">
+                  {taskSummary.highPriorityCount}
+                </span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#d8c8bb]">
+                  High
+                </span>
+              </div>
+            </div>
+
+            {nextDeadlineLabel && (
+              <div className="flex items-center justify-between gap-3 rounded-[10px] border border-white/10 bg-[#120b08]/70 px-3 py-2 text-sm">
+                <span className="font-medium text-[#b9a99d]">Next deadline</span>
+                <span className="font-semibold text-[#fff7ed]">{nextDeadlineLabel}</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="rounded-[10px] border border-dashed border-white/10 bg-white/[0.035] px-3 py-3 text-sm font-medium text-[#b9a99d]">
+            No active tasks
+          </div>
+        )}
+
+        {lessonCount !== null && (
+          <div className="flex items-center justify-between gap-3 text-sm text-[#b9a99d]">
+            <span>Fixed lessons</span>
+            <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 font-semibold text-[#f6e9df]">
+              {lessonCount > 0
+                ? `${lessonCount} lesson${lessonCount === 1 ? '' : 's'}`
+                : 'No fixed lessons'}
+            </span>
+          </div>
+        )}
+      </div>
+    </article>
+  );
+};
 
 const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing, loading }) => {
   const [shareLink, setShareLink] = useState('');
@@ -334,6 +459,8 @@ const FormModal = ({ isOpen, onClose, onSubmit, initialData, isEditing, loading 
 
 export const Modules = () => {
   const [modules, setModules] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [lessons, setLessons] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -348,8 +475,24 @@ export const Modules = () => {
   const fetchModules = async () => {
     try {
       setLoading(true);
-      const res = await modulesAPI.getModules();
-      setModules(res.data.modules || []);
+      setError('');
+      const [moduleResult, taskResult, scheduleResult] = await Promise.allSettled([
+        modulesAPI.getModules(),
+        tasksAPI.getTasks(),
+        scheduleAPI.getSchedule(),
+      ]);
+
+      if (moduleResult.status === 'rejected' || taskResult.status === 'rejected') {
+        throw moduleResult.reason || taskResult.reason;
+      }
+
+      setModules(moduleResult.value.data.modules || []);
+      setTasks(taskResult.value.data.tasks || []);
+      setLessons(
+        scheduleResult.status === 'fulfilled'
+          ? scheduleResult.value.data?.lessons || []
+          : null
+      );
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to fetch modules');
     } finally {
@@ -527,14 +670,26 @@ export const Modules = () => {
             </section>
           ) : (
             <section aria-label="Your modules" className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {modules.map((module) => (
-                <ModuleCard
-                  key={module.id}
-                  module={module}
-                  onEdit={startEdit}
-                  onDelete={handleDeleteModule}
-                />
-              ))}
+              {modules.map((module) => {
+                const activeModuleTasks = getActiveTasksForModule(tasks, module.id);
+                const taskSummary = {
+                  activeCount: activeModuleTasks.length,
+                  dueThisWeekCount: getDueThisWeekCount(activeModuleTasks),
+                  highPriorityCount: getHighPriorityCount(activeModuleTasks),
+                  nextDeadline: getNextDeadline(activeModuleTasks),
+                };
+
+                return (
+                  <ModuleCard
+                    key={module.id}
+                    module={module}
+                    taskSummary={taskSummary}
+                    lessonCount={getLessonCountForModule(module, lessons)}
+                    onEdit={startEdit}
+                    onDelete={handleDeleteModule}
+                  />
+                );
+              })}
             </section>
           )}
         </main>
