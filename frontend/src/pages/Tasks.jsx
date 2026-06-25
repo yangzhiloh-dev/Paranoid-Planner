@@ -20,18 +20,12 @@ import './Dashboard.css';
 const COMPLETED_STATUS = 'completed';
 const IN_PROGRESS_STATUS = 'in_progress';
 const PENDING_STATUS = 'pending';
-const UNASSIGNED_MODULE_ID = 'unassigned';
 
 const TASK_VIEW_FILTERS = {
     overdue: 'overdue',
     dueThisWeek: 'due-this-week',
     highPriority: 'high-priority',
     completed: 'completed',
-};
-
-const TASK_BOARD_VIEWS = {
-    priority: 'priority',
-    module: 'module',
 };
 
 const PRIORITY_BUCKETS = [
@@ -140,54 +134,6 @@ const buildPriorityBuckets = (activeTasks, now = new Date()) => {
     return { bucketTasks, laterHiddenCount };
 };
 
-const getNearestDeadline = (tasks) =>
-    tasks.find((task) => parseDeadline(task.deadline))?.deadline || null;
-
-const getHighPriorityCount = (tasks) => tasks.filter(isHighPriority).length;
-
-const groupTasksByModule = (activeTasks, modules) => {
-    const sectionsByModule = new Map();
-
-    activeTasks.forEach((task) => {
-        const moduleInfo = getModule(modules, task.module_id);
-        const sectionId = String(
-            moduleInfo?.id ?? task.module_id ?? UNASSIGNED_MODULE_ID
-        );
-
-        if (!sectionsByModule.has(sectionId)) {
-            sectionsByModule.set(sectionId, {
-                id: sectionId,
-                moduleCode: moduleInfo?.module_code || 'No module',
-                moduleName: moduleInfo?.module_name || '',
-                tasks: [],
-            });
-        }
-
-        sectionsByModule.get(sectionId).tasks.push(task);
-    });
-
-    return Array.from(sectionsByModule.values())
-        .map((section) => {
-            const sortedTasks = [...section.tasks].sort(
-                sortTasksByDeadlineThenPriority
-            );
-
-            return {
-                ...section,
-                tasks: sortedTasks,
-                activeTaskCount: sortedTasks.length,
-                highPriorityCount: getHighPriorityCount(sortedTasks),
-                nearestDeadline: getNearestDeadline(sortedTasks),
-            };
-        })
-        .sort((first, second) =>
-            first.moduleCode.localeCompare(second.moduleCode, undefined, {
-                numeric: true,
-                sensitivity: 'base',
-            })
-        );
-};
-
 const getStatusLabel = (status) => {
     if (status === IN_PROGRESS_STATUS) return 'In Progress';
     if (status === COMPLETED_STATUS) return 'Completed';
@@ -246,10 +192,8 @@ export const Tasks = () => {
     const [showToast, setShowToast] = useState(false);
     const [activeTaskView, setActiveTaskView] = useState(null);
     const [showCompletedTasks, setShowCompletedTasks] = useState(false);
-    const [activeView, setActiveView] = useState(TASK_BOARD_VIEWS.priority);
     const [visiblePriorityBuckets, setVisiblePriorityBuckets] = useState([]);
     const [undoCompleteTask, setUndoCompleteTask] = useState(null);
-    const [collapsedModuleSections, setCollapsedModuleSections] = useState([]);
 
     const resetTaskForm = () => setFormData(EMPTY_TASK_FORM);
     const resetGuidedForm = () => {
@@ -294,7 +238,6 @@ export const Tasks = () => {
         .sort(sortTasksByDeadlineThenPriority);
     const completedTaskCount = completedTasks.length;
     const { bucketTasks, laterHiddenCount } = buildPriorityBuckets(activeTasks, now);
-    const moduleSections = groupTasksByModule(activeTasks, modules);
     const visibleBuckets = PRIORITY_BUCKETS.filter(
         (bucket) =>
             bucketTasks[bucket.id].length > 0 ||
@@ -467,14 +410,6 @@ export const Tasks = () => {
         resetTaskForm();
     };
 
-    const toggleModuleSection = (sectionId) => {
-        setCollapsedModuleSections((current) =>
-            current.includes(sectionId)
-                ? current.filter((id) => id !== sectionId)
-                : [...current, sectionId]
-        );
-    };
-
     const renderSummaryCards = () => {
         const taskSummaryCards = [
             {
@@ -548,42 +483,6 @@ export const Tasks = () => {
                     );
                 })}
             </section>
-        );
-    };
-
-    const renderViewToggle = () => {
-        const taskBoardViewOptions = [
-            { id: TASK_BOARD_VIEWS.priority, label: 'Priority View' },
-            { id: TASK_BOARD_VIEWS.module, label: 'Module View' },
-        ];
-
-        return (
-            <div className="mb-3 flex flex-col gap-3 rounded-[11px] border border-white/10 bg-[#160e0be6] p-3 shadow-[0_12px_26px_rgba(12,6,4,0.22)] sm:flex-row sm:items-center sm:justify-between">
-                <span className="px-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#b9a99d]">
-                    Task view
-                </span>
-                <div className="grid gap-2 rounded-[9px] border border-white/10 bg-[#0f0907]/70 p-1 sm:flex">
-                    {taskBoardViewOptions.map((option) => {
-                        const isActive = activeView === option.id;
-
-                        return (
-                            <button
-                                key={option.id}
-                                type="button"
-                                onClick={() => setActiveView(option.id)}
-                                aria-pressed={isActive}
-                                className={`rounded-[8px] px-4 py-2 text-sm font-semibold transition duration-200 focus:outline-none focus:ring-2 focus:ring-amber-200/35 ${
-                                    isActive
-                                        ? 'bg-amber-200 text-[#20120d] shadow-[0_10px_22px_rgba(251,191,36,0.18)]'
-                                        : 'text-[#d8c8bb] hover:bg-white/5 hover:text-[#fff7ed]'
-                                }`}
-                            >
-                                {option.label}
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
         );
     };
 
@@ -736,90 +635,6 @@ export const Tasks = () => {
         );
     };
 
-    const renderModuleSection = (section) => {
-        const isCollapsed = collapsedModuleSections.includes(section.id);
-        const nearestDeadlineLabel = section.nearestDeadline
-            ? `${formatDate(section.nearestDeadline)} at ${formatTime(
-                  section.nearestDeadline
-              )}`
-            : null;
-
-        return (
-            <div
-                key={section.id}
-                className="overflow-hidden rounded-[11px] border border-white/10 bg-[#160e0be6] shadow-[0_12px_26px_rgba(12,6,4,0.22)]"
-            >
-                <button
-                    type="button"
-                    onClick={() => toggleModuleSection(section.id)}
-                    aria-expanded={!isCollapsed}
-                    className="flex w-full flex-col gap-4 border-b border-white/10 bg-[#0f0907]/70 px-5 py-4 text-left transition hover:bg-[#140c09]/80 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-200/35 sm:flex-row sm:items-center sm:justify-between"
-                >
-                    <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="mb-0 text-lg font-semibold text-[#fff7ed]">
-                                {section.moduleCode}
-                            </h2>
-                            {section.moduleName && (
-                                <span className="text-sm font-medium text-[#b9a99d]">
-                                    {section.moduleName}
-                                </span>
-                            )}
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-[#d8c8bb]">
-                            <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
-                                {section.activeTaskCount}{' '}
-                                {section.activeTaskCount === 1
-                                    ? 'active task'
-                                    : 'active tasks'}
-                            </span>
-                            {section.highPriorityCount > 0 && (
-                                <span className="rounded-full border border-rose-300/25 bg-rose-300/15 px-3 py-1 text-rose-100">
-                                    {section.highPriorityCount} high priority
-                                </span>
-                            )}
-                            {nearestDeadlineLabel && (
-                                <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-amber-100">
-                                    Nearest {nearestDeadlineLabel}
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                    <span className="self-start rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-semibold text-[#b9a99d] sm:self-center">
-                        {isCollapsed ? 'Expand' : 'Collapse'}
-                    </span>
-                </button>
-
-                {!isCollapsed && (
-                    <div className="space-y-3 p-4">
-                        {section.tasks.map(renderTaskCard)}
-                    </div>
-                )}
-            </div>
-        );
-    };
-
-    const renderModuleView = () => {
-        if (moduleSections.length === 0) {
-            return (
-                <section className="replica-card grid min-h-72 place-items-center p-12 text-center">
-                    <div>
-                        <span className="card-kicker">Module View</span>
-                        <p className="mb-0 mt-3 text-lg font-semibold text-[#fff7ed]">
-                            No active module tasks yet.
-                        </p>
-                    </div>
-                </section>
-            );
-        }
-
-        return (
-            <section aria-label="Module task sections" className="space-y-3">
-                {moduleSections.map(renderModuleSection)}
-            </section>
-        );
-    };
-
     const renderActiveTaskView = () => {
         if (loading) {
             return (
@@ -837,9 +652,7 @@ export const Tasks = () => {
             );
         }
 
-        return activeView === TASK_BOARD_VIEWS.module
-            ? renderModuleView()
-            : renderPriorityView();
+        return renderPriorityView();
     };
 
     const renderCompletedTaskItem = (task) => (
@@ -1014,7 +827,6 @@ export const Tasks = () => {
                     </div>
 
                     {renderEditModal()}
-                    {renderViewToggle()}
                     {renderActiveTaskView()}
                     {renderCompletedTasks()}
                 </main>
