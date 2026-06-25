@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import randomColor from 'randomcolor';
-import { FaBookOpen, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaBookOpen, FaChevronDown, FaEdit, FaTrash } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 import { modulesAPI, scheduleAPI, tasksAPI } from '../api/api';
 import { DashboardSidebar } from '../components/dashboard/DashboardSidebar';
 import PrimaryButton from '../components/PrimaryButton';
@@ -29,11 +30,30 @@ const DAY_OF_WEEK = {
   Saturday: 6,
 };
 
+const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MODULE_CODE_REGEX = /^[A-Z]{2,4}\d{4}[A-Z]{0,3}$/;
 const COMPLETED_STATUS = 'completed';
+const IN_PROGRESS_STATUS = 'in_progress';
+
+const ACTIVITY_LABELS = {
+  LEC: 'Lecture',
+  TUT: 'Tutorial',
+  LAB: 'Lab',
+  REC: 'Recitation',
+  SEC: 'Sectional',
+};
+
+const PRIORITY_LABELS = {
+  1: 'Low',
+  2: 'Low-Medium',
+  3: 'Medium',
+  4: 'Medium-High',
+  5: 'High',
+};
 
 const isActiveTask = (task) => task.status !== COMPLETED_STATUS;
 
+// Module task helpers
 const parseTaskDeadline = (deadline) => {
   if (!deadline) return null;
 
@@ -53,6 +73,27 @@ const getTasksForModule = (tasks, moduleId) =>
 const getActiveTasksForModule = (tasks, moduleId) =>
   getTasksForModule(tasks, moduleId).filter(isActiveTask);
 
+const isTaskOverdue = (task, now = new Date()) => {
+  const deadline = parseTaskDeadline(task.deadline);
+  return Boolean(deadline && deadline < now);
+};
+
+const isTaskDueWithinDays = (task, days, now = new Date()) => {
+  const deadline = parseTaskDeadline(task.deadline);
+  return Boolean(deadline && deadline >= now && deadline <= addDays(now, days));
+};
+
+const sortTasksByDeadlineThenPriority = (firstTask, secondTask) => {
+  const firstDeadline =
+    parseTaskDeadline(firstTask.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+  const secondDeadline =
+    parseTaskDeadline(secondTask.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+
+  if (firstDeadline !== secondDeadline) return firstDeadline - secondDeadline;
+
+  return Number(secondTask.priority || 0) - Number(firstTask.priority || 0);
+};
+
 const getDueThisWeekCount = (tasks, now = new Date()) => {
   const weekEnd = addDays(now, 7);
 
@@ -71,16 +112,126 @@ const getNextDeadline = (tasks, now = new Date()) =>
     .filter((deadline) => deadline && deadline >= now)
     .sort((firstDeadline, secondDeadline) => firstDeadline - secondDeadline)[0] || null;
 
-const getLessonCountForModule = (module, lessons) => {
-  if (Array.isArray(lessons)) {
-    return lessons.filter((lesson) => String(lesson.module_id) === String(module.id)).length;
-  }
+const getModuleTaskSummary = (activeTasks) => ({
+  activeCount: activeTasks.length,
+  dueThisWeekCount: getDueThisWeekCount(activeTasks),
+  highPriorityCount: getHighPriorityCount(activeTasks),
+  nextDeadline: getNextDeadline(activeTasks),
+});
 
-  if (Array.isArray(module.lessons)) return module.lessons.length;
-
-  return null;
+const WORKLOAD_STATUS_STYLES = {
+  high: {
+    tone: 'high',
+    label: 'High pressure',
+    cardClass:
+      '!border-rose-300/40 !bg-[linear-gradient(145deg,rgba(127,29,29,0.28),rgba(41,22,16,0.92)_38%,rgba(18,11,8,0.96))] !shadow-[0_18px_42px_rgba(127,29,29,0.26)] hover:!border-rose-200/50',
+    dotClass: 'ring-rose-300/30',
+    pillClass: 'border-rose-300/40 bg-rose-300/22 text-rose-50 shadow-[0_0_18px_rgba(251,113,133,0.16)]',
+    stripClass: 'bg-gradient-to-r from-rose-400 via-orange-300 to-rose-300',
+    summaryAccentClass: 'bg-rose-300',
+  },
+  medium: {
+    tone: 'medium',
+    label: 'Due soon',
+    cardClass:
+      '!border-amber-300/34 !bg-[linear-gradient(145deg,rgba(146,64,14,0.23),rgba(42,25,14,0.92)_40%,rgba(18,11,8,0.96))] !shadow-[0_18px_38px_rgba(180,83,9,0.2)] hover:!border-amber-200/45',
+    dotClass: 'ring-amber-300/28',
+    pillClass: 'border-amber-300/35 bg-amber-300/20 text-amber-50 shadow-[0_0_16px_rgba(251,191,36,0.14)]',
+    stripClass: 'bg-gradient-to-r from-amber-300 via-yellow-200 to-orange-300',
+    summaryAccentClass: 'bg-amber-300',
+  },
+  stable: {
+    tone: 'stable',
+    label: 'Stable',
+    cardClass:
+      '!border-[#c7b7a8]/18 !bg-[linear-gradient(145deg,rgba(60,54,48,0.16),rgba(22,14,11,0.94)_40%)] !shadow-[0_14px_30px_rgba(12,6,4,0.24)] hover:!border-[#c7b7a8]/30',
+    dotClass: 'ring-[#c7b7a8]/20',
+    pillClass: 'border-[#c7b7a8]/20 bg-white/[0.08] text-[#eaded2]',
+    stripClass: 'bg-gradient-to-r from-[#a8b0bd] via-[#c7b7a8] to-[#8fa3b7]',
+    summaryAccentClass: 'bg-[#c7b7a8]',
+  },
+  clear: {
+    tone: 'clear',
+    label: 'Clear',
+    cardClass:
+      '!border-emerald-300/24 !bg-[linear-gradient(145deg,rgba(6,78,59,0.18),rgba(21,18,12,0.92)_44%,rgba(18,11,8,0.96))] !shadow-[0_14px_28px_rgba(6,78,59,0.14)] hover:!border-emerald-200/34',
+    dotClass: 'ring-emerald-300/22',
+    pillClass: 'border-emerald-300/28 bg-emerald-300/16 text-emerald-50',
+    stripClass: 'bg-gradient-to-r from-emerald-300 via-teal-200 to-emerald-400',
+    summaryAccentClass: 'bg-emerald-300',
+  },
 };
 
+const getModuleWorkloadStatus = (moduleTasks, now = new Date()) => {
+  if (moduleTasks.length === 0) return WORKLOAD_STATUS_STYLES.clear;
+
+  // Pressure tiers are ordered from most urgent to calmest so each module gets one scan-friendly state.
+  const hasHighPressureTask = moduleTasks.some(
+    (task) =>
+      isTaskOverdue(task, now) ||
+      Number(task.priority) >= 5 ||
+      isTaskDueWithinDays(task, 3, now)
+  );
+
+  if (hasHighPressureTask) return WORKLOAD_STATUS_STYLES.high;
+
+  if (moduleTasks.some((task) => isTaskDueWithinDays(task, 7, now))) {
+    return WORKLOAD_STATUS_STYLES.medium;
+  }
+
+  return WORKLOAD_STATUS_STYLES.stable;
+};
+
+// Module lesson helpers
+const getLessonsForModule = (module, lessons) => {
+  if (!Array.isArray(lessons) && !Array.isArray(module.lessons)) return [];
+
+  const moduleLessons = Array.isArray(lessons)
+    ? lessons.filter((lesson) => String(lesson.module_id) === String(module.id))
+    : module.lessons;
+
+  return [...moduleLessons]
+    .sort((firstLesson, secondLesson) => {
+      const firstDay = Number(firstLesson.day_of_week);
+      const secondDay = Number(secondLesson.day_of_week);
+
+      if (firstDay !== secondDay) return firstDay - secondDay;
+
+      return String(firstLesson.start_time || '').localeCompare(
+        String(secondLesson.start_time || '')
+      );
+    });
+};
+
+const hasLessonDataForModule = (module, lessons) =>
+  Array.isArray(lessons) || Array.isArray(module.lessons);
+
+const getModuleWorkspaceData = (module, tasks, lessons) => {
+  const activeTasks = getActiveTasksForModule(tasks, module.id).sort(
+    sortTasksByDeadlineThenPriority
+  );
+  const moduleLessons = getLessonsForModule(module, lessons);
+
+  return {
+    activeTasks,
+    moduleLessons,
+    taskSummary: getModuleTaskSummary(activeTasks),
+    workloadStatus: getModuleWorkloadStatus(activeTasks),
+    lessonCount: hasLessonDataForModule(module, lessons) ? moduleLessons.length : null,
+  };
+};
+
+const getFixedLessonTotal = (modules, lessons) => {
+  if (Array.isArray(lessons)) return lessons.length;
+
+  return modules.reduce(
+    (total, module) =>
+      total + (Array.isArray(module.lessons) ? module.lessons.length : 0),
+    0
+  );
+};
+
+// Display formatting helpers
 const formatModuleDeadline = (deadline) => {
   if (!deadline) return null;
 
@@ -94,6 +245,61 @@ const formatModuleDeadline = (deadline) => {
   };
 
   return new Intl.DateTimeFormat('en', options).format(date);
+};
+
+const formatTaskDeadline = (deadline) => {
+  const date = parseTaskDeadline(deadline);
+
+  return date
+    ? date.toLocaleString([], {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : 'No deadline';
+};
+
+const formatLessonTime = (time) => (time ? String(time).slice(0, 5) : 'TBC');
+
+const formatDayOfWeek = (dayOfWeek) => {
+  const dayIndex = Number(dayOfWeek);
+  return DAY_LABELS[dayIndex] || 'Day TBC';
+};
+
+const formatActivityType = (activityType) => {
+  const type = String(activityType || 'LEC').toUpperCase();
+  return ACTIVITY_LABELS[type] || type;
+};
+
+const getPriorityLabel = (priority) =>
+  PRIORITY_LABELS[Number(priority)] || 'Medium';
+
+const getStatusLabel = (status) => {
+  if (status === IN_PROGRESS_STATUS) return 'In Progress';
+  if (status === COMPLETED_STATUS) return 'Completed';
+  return 'Pending';
+};
+
+const getPriorityBadgeClass = (priority) => {
+  const numericPriority = Number(priority);
+  if (numericPriority >= 5) {
+    return 'border-rose-300/25 bg-rose-300/15 text-rose-100';
+  }
+  if (numericPriority >= 4) {
+    return 'border-orange-300/25 bg-orange-300/15 text-orange-100';
+  }
+  if (numericPriority >= 3) {
+    return 'border-amber-300/20 bg-amber-300/10 text-amber-100';
+  }
+  return 'border-white/10 bg-white/[0.08] text-[#d8c8bb]';
+};
+
+const getStatusBadgeClass = (status) => {
+  if (status === IN_PROGRESS_STATUS) {
+    return 'border-amber-300/20 bg-amber-300/15 text-amber-100';
+  }
+  return 'border-sky-300/20 bg-sky-300/15 text-sky-100';
 };
 
 const normalizeActivityType = (lessonType) => {
@@ -212,15 +418,150 @@ const fetchNusModsModule = async ({ moduleCode, selectedClasses }, semester) => 
   };
 };
 
-const ModuleCard = ({ module, taskSummary, lessonCount, onEdit, onDelete }) => {
+const renderModuleTasks = (moduleTasks) => (
+  <section>
+    <div className="mb-3 flex items-center justify-between gap-3">
+      <h3 className="mb-0 text-sm font-semibold uppercase tracking-[0.14em] text-[#f6e9df]">
+        Active tasks
+      </h3>
+      <Link
+        to="/tasks"
+        className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-xs font-semibold text-amber-100 transition hover:bg-amber-300/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"
+      >
+        Open Tasks
+      </Link>
+    </div>
+
+    {moduleTasks.length === 0 ? (
+      <div className="rounded-[10px] border border-dashed border-white/10 bg-white/[0.035] px-3 py-3 text-sm font-medium text-[#b9a99d]">
+        No active tasks for this module.
+      </div>
+    ) : (
+      <div className="space-y-2">
+        {moduleTasks.map((task) => (
+          <article
+            key={task.id}
+            className="rounded-[10px] border border-white/10 bg-[#120b08]/70 p-3"
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h4 className="mb-0 text-sm font-semibold text-[#fff7ed]">
+                  {task.title}
+                </h4>
+                <div className="mt-1 flex flex-wrap gap-2 text-xs text-[#b9a99d]">
+                  <span>{formatTaskDeadline(task.deadline)}</span>
+                  {task.estimated_minutes && (
+                    <span>{task.estimated_minutes} min</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getPriorityBadgeClass(
+                    task.priority
+                  )}`}
+                >
+                  {getPriorityLabel(task.priority)}
+                </span>
+                <span
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getStatusBadgeClass(
+                    task.status
+                  )}`}
+                >
+                  {getStatusLabel(task.status)}
+                </span>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    )}
+  </section>
+);
+
+const renderModuleLessons = (moduleLessons) => (
+  <section>
+    <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-[#f6e9df]">
+      Fixed timetable events
+    </h3>
+
+    {moduleLessons.length === 0 ? (
+      <div className="rounded-[10px] border border-dashed border-white/10 bg-white/[0.035] px-3 py-3 text-sm font-medium text-[#b9a99d]">
+        No fixed timetable events.
+      </div>
+    ) : (
+      <div className="space-y-2">
+        {moduleLessons.map((lesson, index) => {
+          const lessonLocation =
+            lesson.location || lesson.venue || lesson.room || lesson.class_no || null;
+
+          return (
+            <article
+              key={lesson.id ?? `${lesson.day_of_week}-${lesson.start_time}-${index}`}
+              className="rounded-[10px] border border-white/10 bg-[#120b08]/70 p-3"
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h4 className="mb-0 text-sm font-semibold text-[#fff7ed]">
+                    {formatActivityType(lesson.activity_type)}
+                  </h4>
+                  <p className="mb-0 mt-1 text-xs text-[#b9a99d]">
+                    {formatDayOfWeek(lesson.day_of_week)}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs font-semibold text-[#d8c8bb]">
+                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
+                    {formatLessonTime(lesson.start_time)}-{formatLessonTime(lesson.end_time)}
+                  </span>
+                  {lessonLocation && (
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
+                      {lessonLocation}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    )}
+  </section>
+);
+
+const renderModuleDetails = (moduleTasks, moduleLessons) => (
+  <div className="mt-4 space-y-5 rounded-[12px] border border-white/10 bg-[#0f0907]/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+    {renderModuleTasks(moduleTasks)}
+    <div className="h-px bg-white/10" />
+    {renderModuleLessons(moduleLessons)}
+  </div>
+);
+
+const ModuleCard = ({
+  module,
+  taskSummary,
+  workloadStatus,
+  lessonCount,
+  activeTasks,
+  moduleLessons,
+  isExpanded,
+  onToggleExpand,
+  onEdit,
+  onDelete,
+}) => {
   const nextDeadlineLabel = formatModuleDeadline(taskSummary.nextDeadline);
   const hasActiveTasks = taskSummary.activeCount > 0;
 
   return (
-    <article className="replica-card group flex min-h-56 flex-col p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-300/30 sm:p-6">
+    <article
+      className={`replica-card group relative flex min-h-56 flex-col overflow-hidden p-5 pt-6 transition-all duration-200 hover:-translate-y-0.5 sm:p-6 sm:pt-7 ${workloadStatus.cardClass}`}
+    >
+      <div
+        className={`absolute inset-x-0 top-0 h-1.5 ${workloadStatus.stripClass}`}
+        aria-hidden="true"
+      />
       <div className="mb-5 flex items-start justify-between">
         <div
-          className="h-3.5 w-3.5 rounded-full ring-4 ring-white/5"
+          className={`h-3.5 w-3.5 rounded-full ring-4 ${workloadStatus.dotClass}`}
           style={{
             backgroundColor: module.color,
             boxShadow: `0 0 18px ${module.color}66`,
@@ -250,9 +591,16 @@ const ModuleCard = ({ module, taskSummary, lessonCount, onEdit, onDelete }) => {
       </div>
 
       <span className="card-kicker">Module</span>
-      <h2 className="mb-2 text-xl font-bold tracking-tight text-[#fff7ed]">
-        {module.module_code}
-      </h2>
+      <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <h2 className="mb-0 text-xl font-bold tracking-tight text-[#fff7ed]">
+          {module.module_code}
+        </h2>
+        <span
+          className={`w-fit rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] ${workloadStatus.pillClass}`}
+        >
+          {workloadStatus.label}
+        </span>
+      </div>
       <p className="m-0 text-sm leading-relaxed text-[#b9a99d]">
         {module.module_name}
       </p>
@@ -310,7 +658,24 @@ const ModuleCard = ({ module, taskSummary, lessonCount, onEdit, onDelete }) => {
             </span>
           </div>
         )}
+
+        <button
+          type="button"
+          onClick={() => onToggleExpand(module.id)}
+          aria-expanded={isExpanded}
+          className="flex w-full items-center justify-between rounded-[10px] border border-white/10 bg-white/[0.04] px-3 py-2 text-left text-sm font-semibold text-[#f6e9df] transition hover:border-amber-300/25 hover:bg-amber-300/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"
+        >
+          <span>{isExpanded ? 'Hide details' : 'View tasks and lessons'}</span>
+          <FaChevronDown
+            aria-hidden="true"
+            className={`text-xs text-amber-200 transition-transform ${
+              isExpanded ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
       </div>
+
+      {isExpanded && renderModuleDetails(activeTasks, moduleLessons)}
     </article>
   );
 };
@@ -467,6 +832,7 @@ export const Modules = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingModule, setEditingModule] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [expandedModuleIds, setExpandedModuleIds] = useState([]);
 
   useEffect(() => {
     fetchModules();
@@ -594,6 +960,96 @@ export const Modules = () => {
     setEditingModule(null);
   };
 
+  const toggleModuleDetails = (moduleId) => {
+    setExpandedModuleIds((current) =>
+      current.includes(moduleId)
+        ? current.filter((id) => id !== moduleId)
+        : [...current, moduleId]
+    );
+  };
+
+  const moduleWorkspaceData = modules.map((module) => ({
+    module,
+    ...getModuleWorkspaceData(module, tasks, lessons),
+  }));
+
+  const moduleSummaryCards = [
+    {
+      label: 'Active modules',
+      count: modules.length,
+      accent: 'bg-[#c7b7a8]',
+    },
+    {
+      label: 'High pressure',
+      count: moduleWorkspaceData.filter(
+        ({ workloadStatus }) => workloadStatus.tone === 'high'
+      ).length,
+      accent: WORKLOAD_STATUS_STYLES.high.summaryAccentClass,
+    },
+    {
+      label: 'Due this week',
+      count: getDueThisWeekCount(tasks.filter(isActiveTask)),
+      accent: WORKLOAD_STATUS_STYLES.medium.summaryAccentClass,
+    },
+    {
+      label: 'Fixed lessons',
+      count: getFixedLessonTotal(modules, lessons),
+      accent: WORKLOAD_STATUS_STYLES.clear.summaryAccentClass,
+    },
+  ];
+
+  const renderModuleSummaryRow = () => (
+    <section
+      aria-label="Module workload summary"
+      className="mb-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+    >
+      {moduleSummaryCards.map((card) => (
+        <div
+          key={card.label}
+          className="rounded-[11px] border border-white/10 bg-[#160e0be6] p-4 shadow-[0_12px_26px_rgba(12,6,4,0.22)]"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b9a99d]">
+              {card.label}
+            </span>
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${card.accent} shadow-[0_0_18px_rgba(251,191,36,0.22)]`}
+            />
+          </div>
+          <div className="mt-3 text-2xl font-bold tracking-tight text-[#fff7ed]">
+            {card.count}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+
+  const renderModuleCard = (module) => {
+    const {
+      activeTasks: activeModuleTasks,
+      moduleLessons,
+      taskSummary,
+      workloadStatus,
+      lessonCount,
+    } = getModuleWorkspaceData(module, tasks, lessons);
+
+    return (
+      <ModuleCard
+        key={module.id}
+        module={module}
+        taskSummary={taskSummary}
+        workloadStatus={workloadStatus}
+        lessonCount={lessonCount}
+        activeTasks={activeModuleTasks}
+        moduleLessons={moduleLessons}
+        isExpanded={expandedModuleIds.includes(module.id)}
+        onToggleExpand={toggleModuleDetails}
+        onEdit={startEdit}
+        onDelete={handleDeleteModule}
+      />
+    );
+  };
+
   return (
     <div className="replica-stage">
       <div className="replica-shell">
@@ -650,6 +1106,8 @@ export const Modules = () => {
             loading={submitting}
           />
 
+          {!loading && modules.length > 0 && renderModuleSummaryRow()}
+
           {loading ? (
             <section className="replica-card grid min-h-72 place-items-center p-12 text-center" aria-live="polite">
               <div>
@@ -670,26 +1128,7 @@ export const Modules = () => {
             </section>
           ) : (
             <section aria-label="Your modules" className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {modules.map((module) => {
-                const activeModuleTasks = getActiveTasksForModule(tasks, module.id);
-                const taskSummary = {
-                  activeCount: activeModuleTasks.length,
-                  dueThisWeekCount: getDueThisWeekCount(activeModuleTasks),
-                  highPriorityCount: getHighPriorityCount(activeModuleTasks),
-                  nextDeadline: getNextDeadline(activeModuleTasks),
-                };
-
-                return (
-                  <ModuleCard
-                    key={module.id}
-                    module={module}
-                    taskSummary={taskSummary}
-                    lessonCount={getLessonCountForModule(module, lessons)}
-                    onEdit={startEdit}
-                    onDelete={handleDeleteModule}
-                  />
-                );
-              })}
+              {modules.map(renderModuleCard)}
             </section>
           )}
         </main>
