@@ -9,10 +9,28 @@ const addHours = (date, hours) => {
   return d;
 };
 
+const addMinutes = (date, minutes) => {
+  const d = new Date(date);
+  d.setMinutes(d.getMinutes() + minutes);
+  return d;
+};
+
 const addDays = (date, days) => {
   const d = new Date(date);
   d.setDate(d.getDate() + days);
   return d;
+};
+
+const SCHEDULE_INTERVAL_MINUTES = 15;
+const FALLBACK_SCHEDULE_DAYS = 7;
+
+const roundUpToNextInterval = (date, intervalMinutes = SCHEDULE_INTERVAL_MINUTES) => {
+  const rounded = new Date(date);
+  const intervalMs = intervalMinutes * 60 * 1000;
+  const roundedTime = Math.ceil(rounded.getTime() / intervalMs) * intervalMs;
+  rounded.setTime(roundedTime);
+  rounded.setSeconds(0, 0);
+  return rounded;
 };
 
 const getStudyBlockStartTime = (date, preferredStart) => {
@@ -35,19 +53,26 @@ function compareTasks(a, b) {
   if (a.status === 'completed' && b.status !== 'completed') return 1;
   if (b.status === 'completed' && a.status !== 'completed') return -1;
 
-  if (a.deadline && b.deadline) {
-    const dateA = new Date(a.deadline);
-    const dateB = new Date(b.deadline);
+  const dateA = a.deadline ? new Date(a.deadline) : null;
+  const dateB = b.deadline ? new Date(b.deadline) : null;
+  const hasValidDeadlineA = dateA && !Number.isNaN(dateA.getTime());
+  const hasValidDeadlineB = dateB && !Number.isNaN(dateB.getTime());
+
+  if (hasValidDeadlineA && hasValidDeadlineB) {
     if (dateA.getTime() !== dateB.getTime()) return dateA - dateB;
   }
+  if (hasValidDeadlineA && !hasValidDeadlineB) return -1;
+  if (!hasValidDeadlineA && hasValidDeadlineB) return 1;
 
   if (a.priority !== b.priority) return b.priority - a.priority;
   return (a.estimated_minutes || 60) - (b.estimated_minutes || 60);
 }
 
+const blocksOverlap = (startA, endA, startB, endB) => startA < endB && endA > startB;
+
 const isTimeAvailable = (proposedStart, proposedEnd, blockedTimes) => {
   for (const { start, end } of blockedTimes) {
-    if (proposedStart < end && proposedEnd > start) return false;
+    if (blocksOverlap(proposedStart, proposedEnd, start, end)) return false;
   }
   return true;
 };
@@ -86,36 +111,49 @@ async function generateSchedule(userId, database) {
       [userId]
     );
 
+    const { rows: existingSessions } = await database.query(
+      `SELECT scheduled_start, scheduled_end FROM study_sessions
+       WHERE user_id = $1 AND status != 'cancelled'`,
+      [userId]
+    );
+
     if (!tasks.length) return { message: 'No incomplete tasks', sessions: [] };
 
     const sortedTasks = tasks.sort(compareTasks);
 
     const sessions = [];
+    const generatedSessionBlocks = existingSessions.map((session) => ({
+      start: new Date(session.scheduled_start),
+      end: new Date(session.scheduled_end),
+    }));
     const now = new Date();
 
     for (const task of sortedTasks) {
-      if (!task.deadline) continue;
-
       const estimatedMinutes = task.estimated_minutes || 60;
       const blockDuration = Math.min(120, estimatedMinutes); // max 2 hours per block
       const numBlocks = Math.ceil(estimatedMinutes / blockDuration);
 
-      const isOverdue = new Date(task.deadline) < now;
-      const windowEnd = isOverdue ? addDays(now, 1) : new Date(task.deadline);
+      const taskDeadline = task.deadline ? new Date(task.deadline) : null;
+      const hasValidDeadline = taskDeadline && !Number.isNaN(taskDeadline.getTime());
+      const isOverdue = hasValidDeadline && taskDeadline < now;
+      const windowEnd = isOverdue
+        ? addDays(now, 1)
+        : hasValidDeadline
+          ? taskDeadline
+          : addDays(now, FALLBACK_SCHEDULE_DAYS);
       let currentDay = startOfDay(now);
       let blocksAllocated = 0;
 
       while (blocksAllocated < numBlocks && currentDay <= windowEnd) {
-        // Fixed lessons block candidate study time before sessions are allocated.
+        // Fixed lessons/tutorials/labs block candidate study time.
         const lessonBlocks = await getLessonBlocksForDay(userId, currentDay, database);
-        const scheduledBlocks = sessions.map((session) => ({
-          start: new Date(session.scheduled_start),
-          end: new Date(session.scheduled_end),
-        }));
-        const blockedTimes = [...lessonBlocks, ...scheduledBlocks];
+        const blockedTimes = [...lessonBlocks, ...generatedSessionBlocks];
 
-        let candidate = getStudyBlockStartTime(currentDay, task.preferred_start_time);
-        if (candidate < now) candidate = new Date(now);
+        // Generated sessions use rounded starts so the calendar never lands on odd minutes.
+        let candidate = roundUpToNextInterval(
+          getStudyBlockStartTime(currentDay, task.preferred_start_time)
+        );
+        if (candidate < now) candidate = roundUpToNextInterval(now);
 
         const dayEnd = new Date(currentDay);
         if (task.preferred_end_time) {
@@ -128,7 +166,8 @@ async function generateSchedule(userId, database) {
 
         // Search within the day instead of retrying the same colliding start time.
         while (blocksAllocated < numBlocks) {
-          const currentBlockMinutes = Math.min(120, estimatedMinutes - (blocksAllocated * 120));
+          const remainingMinutes = estimatedMinutes - (blocksAllocated * blockDuration);
+          const currentBlockMinutes = Math.min(blockDuration, remainingMinutes);
           const blockEnd = addHours(candidate, currentBlockMinutes / 60);
           if (blockEnd > candidateWindowEnd) break;
 
@@ -142,11 +181,14 @@ async function generateSchedule(userId, database) {
             );
 
             sessions.push(sessionResult.rows[0]);
-            blockedTimes.push({ start: candidate, end: blockEnd });
+            // Block the newly generated session immediately for the rest of this run.
+            const generatedBlock = { start: new Date(candidate), end: new Date(blockEnd) };
+            generatedSessionBlocks.push(generatedBlock);
+            blockedTimes.push(generatedBlock);
             blocksAllocated++;
-            candidate = blockEnd;
+            candidate = roundUpToNextInterval(blockEnd);
           } else {
-            candidate = addHours(candidate, 0.5);
+            candidate = roundUpToNextInterval(addMinutes(candidate, SCHEDULE_INTERVAL_MINUTES));
           }
         }
 
@@ -252,9 +294,11 @@ const updateSession = async (userId, sessionId, fields, database) => {
 
 module.exports = {
   compareTasks,
+  blocksOverlap,
   generateSchedule,
   getSchedule,
   updateSession,
   getLessonBlocksForDay,
   isTimeAvailable,
+  roundUpToNextInterval,
 };
