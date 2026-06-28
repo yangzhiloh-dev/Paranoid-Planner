@@ -148,47 +148,47 @@ const GuidedTaskCreator = ({
                         </div>
                     </div>
 
-                    <div className="rounded-[28px] border border-white/10 bg-slate-950/70 p-5 shadow-glow">
+                    <div className="rounded-[28px] border border-[#5a3524]/80 bg-[#120b08]/90 p-5 text-[#f5e6d3] shadow-[0_0_30px_rgba(245,158,11,0.08),0_18px_40px_rgba(8,4,2,0.35)]">
                         <div className="mb-4 flex items-center justify-between">
                             <div>
-                                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Live Preview</p>
-                                <h3 className="text-xl font-semibold text-white">Guided task summary</h3>
+                                <p className="text-xs uppercase tracking-[0.2em] text-[#c9a77a]">Live Preview</p>
+                                <h3 className="text-xl font-semibold text-[#fff7ed]">Guided task summary</h3>
                             </div>
                             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${URGENCY_STYLES[guidedTaskForm.urgency]}`}>
                                 {guidedTaskForm.urgency}
                             </span>
                         </div>
 
-                        <div className="space-y-3 text-slate-200">
-                            <div className="rounded-2xl bg-slate-900/75 p-4">
-                                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Module</p>
-                                <p className="mt-2 font-semibold">
+                        <div className="space-y-3 text-[#f5e6d3]">
+                            <div className="rounded-2xl border border-white/10 bg-[#241611]/85 p-4 shadow-[inset_0_1px_0_rgba(255,247,237,0.04)]">
+                                <p className="text-xs uppercase tracking-[0.2em] text-[#a98562]">Module</p>
+                                <p className="mt-2 font-semibold text-[#fff7ed]">
                                     {moduleInfo?.module_code || 'Select a module'}
                                     {guidedTaskForm.module_id && ` — ${moduleInfo?.module_name}`}
                                 </p>
                             </div>
 
                             <div className="grid gap-3 sm:grid-cols-2">
-                                <div className="rounded-2xl bg-slate-900/75 p-4">
-                                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Type</p>
-                                    <p className="mt-2 font-semibold">{guidedTaskForm.taskType}</p>
+                                <div className="rounded-2xl border border-white/10 bg-[#241611]/85 p-4 shadow-[inset_0_1px_0_rgba(255,247,237,0.04)]">
+                                    <p className="text-xs uppercase tracking-[0.2em] text-[#a98562]">Type</p>
+                                    <p className="mt-2 font-semibold text-[#fff7ed]">{guidedTaskForm.taskType}</p>
                                 </div>
-                                <div className="rounded-2xl bg-slate-900/75 p-4">
-                                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Deadline</p>
-                                    <p className="mt-2 font-semibold">
+                                <div className="rounded-2xl border border-white/10 bg-[#241611]/85 p-4 shadow-[inset_0_1px_0_rgba(255,247,237,0.04)]">
+                                    <p className="text-xs uppercase tracking-[0.2em] text-[#a98562]">Deadline</p>
+                                    <p className="mt-2 font-semibold text-[#fff7ed]">
                                         {guidedTaskForm.deadline ? `${formatDate(guidedTaskForm.deadline)} • ${formatTime(guidedTaskForm.deadline)}` : 'Not set'}
                                     </p>
                                 </div>
                             </div>
 
                             <div className="grid gap-3 sm:grid-cols-2">
-                                <div className="rounded-2xl bg-slate-900/75 p-4">
-                                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Title</p>
-                                    <p className="mt-2 font-semibold">{previewTitle}</p>
+                                <div className="rounded-2xl border border-white/10 bg-[#241611]/85 p-4 shadow-[inset_0_1px_0_rgba(255,247,237,0.04)]">
+                                    <p className="text-xs uppercase tracking-[0.2em] text-[#a98562]">Title</p>
+                                    <p className="mt-2 font-semibold text-[#fff7ed]">{previewTitle}</p>
                                 </div>
-                                <div className="rounded-2xl bg-slate-900/75 p-4">
-                                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Duration</p>
-                                    <p className="mt-2 font-semibold">
+                                <div className="rounded-2xl border border-white/10 bg-[#241611]/85 p-4 shadow-[inset_0_1px_0_rgba(255,247,237,0.04)]">
+                                    <p className="text-xs uppercase tracking-[0.2em] text-[#a98562]">Duration</p>
+                                    <p className="mt-2 font-semibold text-[#fff7ed]">
                                         {guidedTaskForm.estimated_minutes ? `${guidedTaskForm.estimated_minutes} mins` : 'Optional'}
                                     </p>
                                 </div>

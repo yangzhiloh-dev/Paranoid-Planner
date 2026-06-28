@@ -20,10 +20,10 @@ export const EMPTY_GUIDED_FORM = {
 
 export const URGENCY_PRIORITY = { Low: 1, Medium: 3, High: 5, Critical: 5 };
 export const URGENCY_STYLES = {
-    Low: 'bg-emerald-100 text-emerald-700',
-    Medium: 'bg-amber-100 text-amber-700',
-    High: 'bg-orange-100 text-orange-700',
-    Critical: 'bg-rose-100 text-rose-700'
+    Low: 'border border-emerald-300/25 bg-emerald-300/15 text-emerald-100 shadow-[0_0_18px_rgba(110,231,183,0.10)]',
+    Medium: 'border border-amber-300/25 bg-amber-300/15 text-amber-100 shadow-[0_0_18px_rgba(245,158,11,0.14)]',
+    High: 'border border-orange-300/30 bg-orange-300/15 text-orange-100 shadow-[0_0_18px_rgba(251,146,60,0.16)]',
+    Critical: 'border border-rose-300/30 bg-rose-300/15 text-rose-100 shadow-[0_0_18px_rgba(251,113,133,0.14)]'
 };
 
 export const TASK_TYPES = ['Assignment', 'Quiz', 'Project', 'Reading', 'Revision', 'Exam', 'Other'];
