@@ -83,7 +83,7 @@ export const Register = () => {
             <div className="relative z-10 mt-12 max-w-sm lg:mt-14">
               <h1 className="text-3xl font-bold leading-tight text-[#fff7ed] sm:text-4xl">
                 Plan smarter.{' '}
-                <span className="bg-gradient-to-r from-[#fff7ed] via-[#ffd8a8] to-[#ff9d4d] bg-clip-text text-transparent">
+                <span className="text-[#fff7ed]">
                   Study calmer.
                 </span>
               </h1>
